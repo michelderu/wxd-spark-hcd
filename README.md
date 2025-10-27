@@ -31,7 +31,7 @@ Supported platforms:
 
 Follow the [IBM watsonx.data Developer Edition installation steps](https://www.ibm.com/docs/en/watsonxdata/standard/2.2.x?topic=developer-edition-new-version). It will take a while before everything is configured and installed, please be patient.
 
-Finally start IBM watsonx.data Developer Edition:
+Finally expose the IBM watsonx.data Developer Edition UI:
 ```bash
 export KUBECONFIG=~/.kube/config && nohup kubectl port-forward -n wxd service/lhconsole-ui-svc 6443:443 --address 0.0.0.0 > /dev/null 2>&1 &
 ```
@@ -155,6 +155,6 @@ A lot of DataStax DSE customers have a use-case for Spark on top of their operat
 THIS SECTION NEEDS TO BE FINISHED
 
 ## References used throughout
-https://www.ibm.com/docs/en/watsonxdata/standard/2.2.x?topic=developer-edition-new-version
-https://github.ibm.com/Data-Labs/wx.d-developers-edition-add-hcd
-https://github.ibm.com/pravin-bhat/cass_spark_iceberg
+- https://www.ibm.com/docs/en/watsonxdata/standard/2.2.x?topic=developer-edition-new-version
+- https://github.ibm.com/Data-Labs/wx.d-developers-edition-add-hcd
+- https://github.ibm.com/pravin-bhat/cass_spark_iceberg
