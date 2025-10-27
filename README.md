@@ -1,4 +1,4 @@
-# Runbook: Watsonx.data Developer Edition & HCD Installation
+# Converged workloads with IBM watsonx.data and Datastax HCD
 
 ## 1. Overview
 
