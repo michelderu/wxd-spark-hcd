@@ -1,4 +1,4 @@
-# 🚀 Converged Workloads with IBM and DataStax
+# 🚀 IBM x DataStax for Converged OLTP and OLAP Workloads
 
 <div align="center">
 
