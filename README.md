@@ -298,6 +298,19 @@ Federated analytics can be stressful on operational systems handling massive wor
 
 Many DataStax DSE customers require Spark capabilities for operational data analytics. With watsonx.data, you can achieve seamless synergy between operational and analytical processing using the Hyper-Converged Database (HCD).
 
+This section uses the [cass_spark_iceberg repository](https://github.ibm.com/pravin-bhat/cass_spark_iceberg) that:
+1. Pulls the operation data from HCD
+2. Turns it into analytical data using a Star-schema and stores in Iceberg tables
+3. Runs several analytical queries on the Iceberg tables, offloading workload from HCD
+
+<div align="center">
+
+![star-schema](./assets/star-schema.png)
+
+</div>
+
+For more information about the process, sequence, tables and queries see [OLAP_STAR_SCHEMA.md](./OLAP_STAR_SCHEMA.md).
+
 ### 📋 Implementation Steps
 
 1. **🔧 Create Spark Engine**
