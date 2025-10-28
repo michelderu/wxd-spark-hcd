@@ -53,7 +53,7 @@ export KUBECONFIG=~/.kube/config && nohup kubectl port-forward -n wxd service/ib
 ```
 See the [IBM watsonx.data documentation](https://www.ibm.com/docs/en/watsonxdata/standard/2.2.x?topic=administering-exposing-minio-service) for more information.
 
-Navigate to [http://localhost:9001/](http://localhost:9001/) and use username / password for MinIO: dummyvalue / dummyvalue.
+Navigate to [http://localhost:9001/](http://localhost:9001/) and use dummyvalue / dummyvalue as a username and password for MinIO.
 
 ![minio-homepage](./assets/minio-homepage.png)
 
