@@ -1,233 +1,390 @@
-# Converged workloads with IBM watsonx.data and Datastax HCD
+# 🚀 Converged Workloads with IBM watsonx.data and DataStax HCD
 
-## 1. Overview
+<div align="center">
 
-**Purpose:**  
-Facilitate seamless integration of DataStax HCD (Cassandra) to manage extensive operational workloads, using wx.d for enhanced governed analytics capabilities.
+![IBM watsonx.data](https://img.shields.io/badge/IBM-watsonx.data-blue?style=for-the-badge&logo=ibm)
+![DataStax HCD](https://img.shields.io/badge/DataStax-HCD-green?style=for-the-badge&logo=apache-cassandra)
+![Apache Spark](https://img.shields.io/badge/Apache-Spark-orange?style=for-the-badge&logo=apache-spark)
+![Apache Iceberg](https://img.shields.io/badge/Apache-Iceberg-blue?style=for-the-badge)
+
+*A comprehensive guide to integrating operational and analytical workloads*
+
+</div>
+
+---
+
+## 📋 Table of Contents
+
+- [🎯 Overview](#-overview)
+- [⚙️ Prerequisites](#️-prerequisites)
+- [🔧 Installation Steps](#-installation-steps)
+  - [A. IBM watsonx.data Developer Edition](#a-ibm-watsonxdata-developer-edition)
+  - [B. DataStax Hyper-Converged Database](#b-datastax-hyper-converged-database)
+  - [C. Add HCD to watsonx.data](#c-add-hcd-to-watsonxdata)
+- [🔍 Federated Analytics](#-federated-analytics)
+- [📊 Materialized Analytics using wx.d CTAS](#-materialized-analytics-using-wxd-ctas)
+- [⚡ Utilizing the Spark Engine](#-utilizing-the-spark-engine-for-materialized-analytics)
+- [📚 References](#-references)
+- [🛠️ Troubleshooting](#️-troubleshooting)
+
+---
+
+## 🎯 Overview
+
+<div align="center">
 
 ![wxd-infrastructure-manager](./assets/wxd-infrastructure-manager.png)
 
-**Scope:**  
-Covers installation of watsonx.data and HCD, and the use of Spark to synchronize real-time data with an Iceberg table.
+</div>
 
-**Audience:**  
-Targeted towards Developers, Customer Engineers, and Pre-sales professionals.
+### 🎯 Purpose
+Facilitate seamless integration of **DataStax HCD (Cassandra)** to manage extensive operational workloads, using **IBM watsonx.data** for enhanced governed analytics capabilities.
 
-## 2. Prerequisites
+### 📖 Scope
+This guide covers:
+- ✅ Installation of IBM watsonx.data Developer Edition
+- ✅ Setup of DataStax Hyper-Converged Database (HCD)
+- ✅ Integration between operational and analytical systems
+- ✅ Real-time data synchronization using Apache Spark
+- ✅ Materialized analytics with Apache Iceberg tables
 
-System Requirements:
-- Architecture: x86_64 or ARM64
-- Cores: Minimum 12
-- Memory: Minimum 16GB RAM (recommended 24GB)
-- Disk Space: Minimum 100GB free space
+### 👥 Target Audience
+- 🧑‍💻 **Developers** - Implementation and integration
+- 🔧 **Customer Engineers** - Solution deployment
+- 💼 **Pre-sales Professionals** - Solution demonstration
 
-Supported platforms:
-- macOS (Intel or Apple Silicon)
-- Windows 10/11 64-bit
+## ⚙️ Prerequisites
 
-## 3. Installation Steps
+### 💻 System Requirements
 
-### A. Start IBM watsonx.data Developer Edition
+| Component | Minimum | Recommended |
+|-----------|---------|-------------|
+| **Architecture** | x86_64 or ARM64 | x86_64 or ARM64 |
+| **CPU Cores** | 12 cores | 16+ cores |
+| **Memory** | 16GB RAM | 24GB+ RAM |
+| **Disk Space** | 100GB free | 200GB+ free |
 
-Follow the [IBM watsonx.data Developer Edition installation steps](https://www.ibm.com/docs/en/watsonxdata/standard/2.2.x?topic=developer-edition-new-version). It will take a while before everything is configured and installed, please be patient.
+### 🖥️ Supported Platforms
+- 🍎 **macOS** (Intel or Apple Silicon)
+- 🪟 **Windows 10/11** 64-bit
+- 🐧 **Linux** (Ubuntu 20.04+, RHEL 8+)
 
-You can check the pods to make sure all are running:
-```bash
-kubectl get pods -n wxd
-kubectl get pods -n wxd | wc -l # should return 31
-```
+### 📦 Required Software
+- **Docker/Podman** - Container runtime
+- **Kubernetes** - Container orchestration
+- **Java 17** - For DataStax HCD
+- **Maven** - For building Spark applications
 
-Finally expose the IBM watsonx.data Developer Edition UI:
-```bash
-export KUBECONFIG=~/.kube/config && nohup kubectl port-forward -n wxd service/lhconsole-ui-svc 6443:443 --address 0.0.0.0 > /dev/null 2>&1 &
-```
+---
 
-Test IBM watsonx.data Developer Edition by navigating to [https://localhost:6443/](https://localhost:6443/) and logging in with `ibmhladmin` / `password`.
+## 🔧 Installation Steps
 
-![wxd-homepage](./assets/wxd-homepage.png)
+### A. IBM watsonx.data Developer Edition
 
-In case you want access to MinIO and MDS:
-```bash
-export KUBECONFIG=~/.kube/config && nohup kubectl port-forward -n wxd service/ibm-lh-minio-svc 9001:9001 --address 0.0.0.0 > /dev/null 2>&1 &
-export KUBECONFIG=~/.kube/config && nohup kubectl port-forward -n wxd service/ibm-lh-mds-thrift-svc 8381:8381 --address 0.0.0.0 > /dev/null 2>&1 &
-```
-See the [IBM watsonx.data documentation](https://www.ibm.com/docs/en/watsonxdata/standard/2.2.x?topic=administering-exposing-minio-service) for more information.
+> ⏱️ **Installation Time**: The setup process may take 15-30 minutes depending on your system performance.
 
-Navigate to [http://localhost:9001/](http://localhost:9001/) and use dummyvalue / dummyvalue as a username and password for MinIO.
+1. **📥 Download & Install**
+   Follow the [IBM watsonx.data Developer Edition installation steps](https://www.ibm.com/docs/en/watsonxdata/standard/2.2.x?topic=developer-edition-new-version).
 
-![minio-homepage](./assets/minio-homepage.png)
+2. **🔍 Verify Installation**
+   Check that all pods are running correctly:
+   ```bash
+   kubectl get pods -n wxd
+   kubectl get pods -n wxd | wc -l # should return 31
+   ```
 
-### B. Start DataStax Hyper-Converged Database
+3. **🌐 Expose the UI**
+   ```bash
+   export KUBECONFIG=~/.kube/config && nohup kubectl port-forward -n wxd service/lhconsole-ui-svc 6443:443 --address 0.0.0.0 > /dev/null 2>&1 &
+   ```
 
-Download the [tarball](http://downloads.datastax.com/hcd/hcd-1.2.3-bin.tar.gz) and unzip.
+4. **✅ Test Access**
+   Navigate to [https://localhost:6443/](https://localhost:6443/) and log in with:
+   - **Username**: `ibmhladmin`
+   - **Password**: `password`
 
-When using with Java 17, please set `CASSANDRA_JDK_UNSUPPORTED=true`.
-Start with:
-```bash
-export JAVA_HOME="$(/usr/libexec/java_home -v17)"
-export PATH="$JAVA_HOME/bin:$PATH"
-export CASSANDRA_JDK_UNSUPPORTED=true
-./hcd-1.2.3/bin/hcd cassandra
-```
+   <div align="center">
+   
+   ![wxd-homepage](./assets/wxd-homepage.png)
+   
+   </div>
 
-Look for:
-> INFO  [main] 2025-10-27 13:40:24,500 HcdDaemon.java:22 - HCD startup complete
+5. **🔧 Optional: Access MinIO and MDS**
+   ```bash
+   # MinIO (Object Storage)
+   export KUBECONFIG=~/.kube/config && nohup kubectl port-forward -n wxd service/ibm-lh-minio-svc 9001:9001 --address 0.0.0.0 > /dev/null 2>&1 &
+   
+   # MDS (Metadata Service)
+   export KUBECONFIG=~/.kube/config && nohup kubectl port-forward -n wxd service/ibm-lh-mds-thrift-svc 8381:8381 --address 0.0.0.0 > /dev/null 2>&1 &
+   ```
 
-Test if all works well:
-```bash
-./hcd-1.2.3/bin/hcd cqlsh -u cassandra -p cassandra
-```
+   > 📖 **Reference**: See the [IBM watsonx.data documentation](https://www.ibm.com/docs/en/watsonxdata/standard/2.2.x?topic=administering-exposing-minio-service) for more information.
 
-You should be able to log in. Type `quit` to exit.
+   Access MinIO at [http://localhost:9001/](http://localhost:9001/) with credentials:
+   - **Username**: `dummyvalue`
+   - **Password**: `dummyvalue`
 
-Load some sample data:
-```bash
-cqlsh -f sample-data.cql
-```
+   <div align="center">
+   
+   ![minio-homepage](./assets/minio-homepage.png)
+   
+   </div>
+
+### B. DataStax Hyper-Converged Database
+
+1. **📥 Download & Extract**
+   ```bash
+   # Download the HCD tarball
+   wget http://downloads.datastax.com/hcd/hcd-1.2.3-bin.tar.gz
+   
+   # Extract the archive
+   tar -xzf hcd-1.2.3-bin.tar.gz
+   ```
+
+2. **☕ Configure Java Environment**
+   ```bash
+   # Set Java 17 environment (required for HCD)
+   export JAVA_HOME="$(/usr/libexec/java_home -v17)"
+   export PATH="$JAVA_HOME/bin:$PATH"
+   export CASSANDRA_JDK_UNSUPPORTED=true
+   ```
+
+3. **🚀 Start HCD**
+   ```bash
+   ./hcd-1.2.3/bin/hcd cassandra
+   ```
+
+   > ✅ **Success Indicator**: Look for this message in the logs:
+   > ```
+   > INFO  [main] 2025-10-27 13:40:24,500 HcdDaemon.java:22 - HCD startup complete
+   > ```
+
+4. **🔍 Test Connection**
+   ```bash
+   ./hcd-1.2.3/bin/hcd cqlsh -u cassandra -p cassandra
+   ```
+   
+   Type `quit` to exit the CQL shell.
+
+5. **📊 Load Sample Data**
+   ```bash
+   cqlsh -f sample-data.cql
+   ```
 
 ### C. Add HCD to watsonx.data
-1. Navigate to [https://localhost:6443/#/infrastructure-manager](https://localhost:6443/#/infrastructure-manager) and click `Add component'
-2. Select `Cassandra` as a data source, click `Next`. Use the following configuraton details:
-    - Display name: HCD
-    - Hostname: host.containers.internal
-    - Portname: 9042
-    - Username: cassandra
-    - Password: cassandra
-    - Select 'Associate catalog'
-    - Catalog name: hcd
 
-Test to see if the sample data is available:
-1. Click the `hcd` catalog
-2. Click `Data Objects`
-3. Expand `sample_ks` and click `users` in the Catalog browser
-4. Click `Data sample` and confirm the 3 users are present
+1. **🔗 Connect HCD to watsonx.data**
+   - Navigate to [https://localhost:6443/#/infrastructure-manager](https://localhost:6443/#/infrastructure-manager)
+   - Click `Add component`
+   - Select `Cassandra` as a data source
+   - Click `Next`
 
-![wxd-data-manager](./assets/wxd-data-manager.png)
+2. **⚙️ Configuration Details**
+   | Field | Value |
+   |-------|-------|
+   | **Display name** | `HCD` |
+   | **Hostname** | `host.containers.internal` |
+   | **Port** | `9042` |
+   | **Username** | `cassandra` |
+   | **Password** | `cassandra` |
+   | **Associate catalog** | ✅ Checked |
+   | **Catalog name** | `hcd` |
 
-## Federated analytics
-The first converged data integration is based on federated analytics using Presto as a query engine.
+3. **✅ Verify Data Access**
+   - Click the `hcd` catalog
+   - Click `Data Objects`
+   - Expand `sample_ks` and click `users`
+   - Click `Data sample` and confirm the 3 users are present
 
-1. First associate the `hcd` catalog with Presto by clicking `Presto`
-    - Click `Manage associations`
-    - Add `hcd`, then `Save and restart engine`
+   <div align="center">
+   
+   ![wxd-data-manager](./assets/wxd-data-manager.png)
+   
+   </div>
 
-2. Now you can start querying your operational data in the analytical environment of watsonx.data:
-    - Open `Query workspace` on the left hand side
-    - Ensure `Presto` is selected as the active engine
-    - Run the following query `SELECT * from hcd.sample_ks.users`
+---
 
-![wxd-query-workspace](./assets/wxd-query-workspace.png)
+## 🔍 Federated Analytics
 
-Done! You have just queried Cassandra using SQL through the Presto Query Engine!
+> 🎯 **Goal**: Query operational Cassandra data directly using SQL through Presto query engine
 
-## Materialized analytics using wx.d CTAS
-Federated analytics can be stressful on an operational system that handle massive workloads and requires low latencies. Hence it can be helpful to materialize the data into a governed catalog with associated Parquet files. This concept is called *Data Offloading* within watsonx.data.
+The first converged data integration leverages **federated analytics** using Presto as the query engine, allowing you to query Cassandra data using standard SQL without data movement.
 
-With fit-for-purpose engines, data warehousing costs can be reduced by offloading workloads from a data warehouse to watsonx.data. Specifically,
-applications that need to access this data can query it through Presto (or Spark). This includes being able to combine the offloaded data with the data that remains in the warehouse.
+### 📋 Steps
 
-1. First create a new schema in Iceberg
-    - Click `Data manager`, `Create` and then `Create schema`, select:
-        - Catalog: iceberg_data
-        - Name: hcd_users
+1. **🔗 Associate HCD Catalog with Presto**
+   - Click `Presto` in the Infrastructure Manager
+   - Click `Manage associations`
+   - Add `hcd` catalog
+   - Click `Save and restart engine`
 
-2. Now transfer the data from the operational database to the analytical Iceberg table
-    - Click `Query workspace` and click `+` to create a new query tab
-    - Use the following CTAS (Create Table As) query
-        ```sql
-        create table iceberg_data.hcd_users.users as
-        select * from hcd.sample_ks.users;
-        ```
-        ![wxd-query-manager-ctas](./assets/wxd-query-workspace-ctas.png)
+2. **🔍 Query Operational Data**
+   - Open `Query workspace` from the left sidebar
+   - Ensure `Presto` is selected as the active engine
+   - Run the following query:
+   ```sql
+   SELECT * FROM hcd.sample_ks.users;
+   ```
 
-3. Test it all works!
-    - Click `Query workspace` and click `+` to create a new query tab
-    - Run the following query on the analytical catalog:
-        ```
-        select * from iceberg_data.hcd_users.users
-        ```
+   <div align="center">
+   
+   ![wxd-query-workspace](./assets/wxd-query-workspace.png)
+   
+   </div>
 
-        ![wxd-query-manager-iceberg](./assets/wxd-query-workspace-iceberg.png)
+> 🎉 **Success!** You have successfully queried Cassandra data using SQL through the Presto Query Engine!
 
-# Utilizing the Spark engine for Materialized analytics
-A lot of DataStax DSE customers have a use-case for Spark on top of their operational data and have been using DSE Analytics as a Spark engine. Now with watsonx.data the synergy between operational and analytical processing can be provided easily when using  Hyper-Converged Database (HCD) as well.
+---
 
-1. First create a new Spark engine
-    - Click `Infrastructure manager` select `IBM Spark` and click `Next`
-        - Display name: Spark
-        - Associated catalogs: iceberg_data
-    - Click `Create`
+## 📊 Materialized Analytics using wx.d CTAS
 
-2. Clone the excellent [example by Pravin Bhat](https://github.ibm.com/pravin-bhat/cass_spark_iceberg)
-    - Update your Cassandra connection settings as required in file `CassUtil.java` in function `getLocalCQLSession()`
-    - Build the package by `mvn clean package`
+> 🎯 **Goal**: Create materialized views for better performance and reduced operational system load
 
-3. Generate some sample data
-    - Generate sample data by `mvn exec:java -Dexec.mainClass="com.ibm.wxd.datalabs.demo.cass_spark_iceberg.LoadCustomerOrdersById"`
-    - You can check data creation either in watsonx.data's Query workspace or through `./hcd-1.2.3/bin/cqlsh` by running `select * from retail_ks.customer_orders_by_id;`
+Federated analytics can be stressful on operational systems handling massive workloads with low latency requirements. **Data Offloading** addresses this by materializing data into a governed catalog with associated Parquet files.
 
-4. Prepare MinIO S3 buyckets and provide the Spark OLAP app
-    - Ensure the MinIO service is port-forwarded to your localhost (see [A. Start IBM watsonx.data Developer Edition](#a-start-ibm-watsonxdata-developer-edition))
-    - Create two buckets called `olap` and `spark-artifacts`
-    - Copy the JAR-file `cass-spark-iceberg-1.2jar` to the `spark-artifacts` bucket
+### 💡 Benefits of Data Offloading
+- 🚀 **Reduced Operational Load** - Minimizes impact on production Cassandra clusters
+- 💰 **Cost Optimization** - Offload workloads from expensive data warehouses
+- ⚡ **Better Performance** - Faster queries on materialized data
+- 🔄 **Flexible Analytics** - Combine offloaded data with warehouse data
 
-5. Run the OLAP job
-    - Navigate to `wx.d Infrastructure manager` and click your `Spark` engine
-    - Click `Applications` and click `Create application +`
-    - Click `Payload` and paste the following configuration:
-    ```json
-    {
-        "application_details": {
-            "application": "s3a://spark-artifacts/cass-spark-iceberg-1.2.jar",
-            "class": "com.ibm.wxd.datalabs.demo.cass_spark_iceberg.CassandraToIceberg",
-            "conf": {
-                "spark.cassandra.connection.host": "host.containers.internal",
-                "spark.cassandra.auth.username": "cassandra",
-                "spark.cassandra.auth.password": "cassandra",
-                "spark.sql.catalog.spark_catalog.warehouse": "s3a://olap/",
-                "spark.hadoop.fs.s3a.impl": "org.apache.hadoop.fs.s3a.S3AFileSystem",
-                "spark.hadoop.fs.s3a.path.style.access": "true",
-                "spark.hadoop.fs.s3a.bucket.spark-artifacts.endpoint": "http://ibm-lh-minio-svc:9000",
-                "spark.hadoop.fs.s3a.bucket.spark-artifacts.access.key": "dummyvalue",
-                "spark.hadoop.fs.s3a.bucket.spark-artifacts.secret.key": "dummyvalue",
-                "spark.hadoop.fs.s3a.bucket.spark-artifacts.aws.credentials.provider": "org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider",
-                "spark.hadoop.fs.s3a.bucket.olap.endpoint": "http://ibm-lh-minio-svc:9000",
-                "spark.hadoop.fs.s3a.bucket.olap.access.key": "dummyvalue",
-                "spark.hadoop.fs.s3a.bucket.olap.secret.key": "dummyvalue",
-                "spark.hadoop.fs.s3a.bucket.olap.aws.credentials.provider": "org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider"
-            }
-        },
-        "deploy_mode": "local"
-    }
-    ```
-    - Execute the logs watcher through `./spark-logs.sh` and keep watching that window. This will print the logs from the Spark pod that runs je OLAP job
-    - Now run the job by clicking `Submit application`
+### 📋 Implementation Steps
 
-## References used throughout
-- https://www.ibm.com/docs/en/watsonxdata/standard/2.2.x?topic=developer-edition-new-version
-- https://github.ibm.com/Data-Labs/wx.d-developers-edition-add-hcd
-- https://github.ibm.com/pravin-bhat/cass_spark_iceberg
-- https://sinrega.org/2024-03-06-enabling-containers-gpu-macos
+1. **🗂️ Create Iceberg Schema**
+   - Click `Data manager` → `Create` → `Create schema`
+   - Select:
+     - **Catalog**: `iceberg_data`
+     - **Name**: `hcd_users`
 
-## Troubleshooting
+2. **📦 Transfer Data with CTAS**
+   - Click `Query workspace` → `+` (new query tab)
+   - Execute the following CTAS (Create Table As Select) query:
+   ```sql
+   CREATE TABLE iceberg_data.hcd_users.users AS
+   SELECT * FROM hcd.sample_ks.users;
+   ```
 
-### Podman on Apple Silicon
-There is an issue when LibKrun is being used by Podman Desktop on Apple Silicon (M type machines). It depends on krunkit, which on Apple Silicon is limited to 8 cores. While watsonx.data Developer edition requires at least 10 cores. With LibKrun the start up of the wxd machine fails.
+   <div align="center">
+   
+   ![wxd-query-manager-ctas](./assets/wxd-query-workspace-ctas.png)
+   
+   </div>
 
-Switching to applehv offers:
+3. **✅ Verify Materialized Data**
+   - Click `Query workspace` → `+` (new query tab)
+   - Run the following query on the analytical catalog:
+   ```sql
+   SELECT * FROM iceberg_data.hcd_users.users;
+   ```
 
-✅ Benefits of Switching to applehv
-- No hard-coded 8-core limit: Apple’s Hypervisor Framework (applehv) is more flexible in terms of CPU allocation. It allows Podman machines to use more than 8 cores, depending on your system’s actual capacity.
-- Stable and native: It’s the default hypervisor backend on macOS and is well-supported by Apple.
-- Better compatibility: Especially for workloads that don’t require GPU passthrough or advanced device emulation.
+   <div align="center">
+   
+   ![wxd-query-manager-iceberg](./assets/wxd-query-workspace-iceberg.png)
+   
+   </div>
 
-⚠️ Trade-offs Compared to libkrun
-- No GPU passthrough: libkrun supports GPU acceleration via virtio-gpu and Venus/MoltenVK, which is not available with applehv.
-- Less isolation: libkrun offers more advanced process isolation features, which are useful for confidential workloads.
-- Less control over VM internals: applehv is a lower-level API and doesn’t expose as many customization options as libkrun.
+---
 
-### wx.d memory utilization
-The default machine that gets created is called podman-wxd, with 10 cores and 16 GB of memory. 16 GB is a bit low as mostly 98% is being utilized. To provide a more healthy environment, we can create this machine up-front and the wx.d installer will re-use it.
+## ⚡ Utilizing the Spark Engine for Materialized Analytics
+
+> 🎯 **Goal**: Leverage Apache Spark for advanced data processing and analytics workloads
+
+Many DataStax DSE customers require Spark capabilities for operational data analytics. With watsonx.data, you can achieve seamless synergy between operational and analytical processing using the Hyper-Converged Database (HCD).
+
+### 📋 Implementation Steps
+
+1. **🔧 Create Spark Engine**
+   - Click `Infrastructure manager`
+   - Select `IBM Spark` → `Next`
+   - Configure:
+     - **Display name**: `Spark`
+     - **Associated catalogs**: `iceberg_data`
+   - Click `Create`
+
+2. **📥 Clone and Build Sample Application**
+   ```bash
+   # Clone the example repository
+   git clone https://github.ibm.com/pravin-bhat/cass_spark_iceberg
+   cd cass_spark_iceberg
+   
+   # Update Cassandra connection settings in CassUtil.java
+   # Build the application
+   mvn clean package
+   ```
+
+3. **📊 Generate Sample Data**
+   ```bash
+   mvn exec:java -Dexec.mainClass="com.ibm.wxd.datalabs.demo.cass_spark_iceberg.LoadCustomerOrdersById"
+   ```
+
+   > 🔍 **Verify Data**: Check data creation in watsonx.data Query workspace or via CQL:
+   > ```sql
+   > SELECT * FROM retail_ks.customer_orders_by_id;
+   > ```
+
+4. **🪣 Prepare MinIO S3 Buckets**
+   - Ensure MinIO service is port-forwarded (see [Section A](#a-ibm-watsonxdata-developer-edition))
+   - Create buckets: `olap` and `spark-artifacts`
+   - Upload JAR file: `cass-spark-iceberg-1.2.jar` → `spark-artifacts` bucket
+
+5. **🚀 Run OLAP Job**
+   - Navigate to `wx.d Infrastructure manager` → Click `Spark` engine
+   - Click `Applications` → `Create application +`
+   - Click `Payload` and paste the configuration:
+
+   ```json
+   {
+       "application_details": {
+           "application": "s3a://spark-artifacts/cass-spark-iceberg-1.2.jar",
+           "class": "com.ibm.wxd.datalabs.demo.cass_spark_iceberg.CassandraToIceberg",
+           "conf": {
+               "spark.cassandra.connection.host": "host.containers.internal",
+               "spark.cassandra.auth.username": "cassandra",
+               "spark.cassandra.auth.password": "cassandra",
+               "spark.sql.catalog.spark_catalog.warehouse": "s3a://olap/",
+               "spark.hadoop.fs.s3a.impl": "org.apache.hadoop.fs.s3a.S3AFileSystem",
+               "spark.hadoop.fs.s3a.path.style.access": "true",
+               "spark.hadoop.fs.s3a.bucket.spark-artifacts.endpoint": "http://ibm-lh-minio-svc:9000",
+               "spark.hadoop.fs.s3a.bucket.spark-artifacts.access.key": "dummyvalue",
+               "spark.hadoop.fs.s3a.bucket.spark-artifacts.secret.key": "dummyvalue",
+               "spark.hadoop.fs.s3a.bucket.spark-artifacts.aws.credentials.provider": "org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider",
+               "spark.hadoop.fs.s3a.bucket.olap.endpoint": "http://ibm-lh-minio-svc:9000",
+               "spark.hadoop.fs.s3a.bucket.olap.access.key": "dummyvalue",
+               "spark.hadoop.fs.s3a.bucket.olap.secret.key": "dummyvalue",
+               "spark.hadoop.fs.s3a.bucket.olap.aws.credentials.provider": "org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider"
+           }
+       },
+       "deploy_mode": "local"
+   }
+   ```
+
+6. **📊 Monitor Execution**
+   - Execute logs watcher: `./spark-logs.sh`
+   - Click `Submit application`
+   - Watch results in the logs watcher terminal 🎉
+
+---
+
+## 📚 References
+
+| Resource | Description | Link |
+|----------|-------------|------|
+| **IBM watsonx.data Documentation** | Official installation guide | [Developer Edition Setup](https://www.ibm.com/docs/en/watsonxdata/standard/2.2.x?topic=developer-edition-new-version) |
+| **DataStax HCD Integration** | GitHub repository with integration examples | [wx.d-developers-edition-add-hcd](https://github.ibm.com/Data-Labs/wx.d-developers-edition-add-hcd) |
+| **Spark Iceberg Example** | Sample application by Pravin Bhat | [cass_spark_iceberg](https://github.ibm.com/pravin-bhat/cass_spark_iceberg) |
+| **macOS Container GPU** | Technical article on enabling containers GPU on macOS | [Enabling Containers GPU macOS](https://sinrega.org/2024-03-06-enabling-containers-gpu-macos) |
+
+---
+
+## 🛠️ Troubleshooting
+
+### 🍎 Podman on Apple Silicon
+
+> ⚠️ **Issue**: LibKrun limitation on Apple Silicon machines
+
+**Problem**: LibKrun (used by Podman Desktop on Apple Silicon) is limited to 8 cores, but watsonx.data Developer Edition requires at least 10 cores.
+
+#### ✅ Solution: Switch to applehv
 
 ```bash
 podman machine stop
@@ -236,9 +393,60 @@ podman machine init --cpus 10 --memory 24576 --rootful podman-wxd
 podman machine start podman-wxd
 ```
 
-### Spark OLAP step missing keyspace and table
-It might be that the step of creating sample data in [Utilizing the Spark engine for Materialized analytics](#utilizing-the-spark-engine-for-materialized-analytics) fails due to no keyspace and table available. Simply solve that by running the following in `./hcd-1.2.3/bin/cqlsh`:
-```sql
-CREATE KEYSPACE retail_ks WITH replication = {'class': 'SimpleStrategy', 'replication_factor': 1} ;
-CREATE TABLE IF NOT EXISTS customer_orders_by_id (customer_id uuid, order_id uuid, order_date timestamp, status text, PRIMARY KEY (customer_id, order_id)) ;
+#### 📊 Comparison: applehv vs libkrun
+
+| Feature | applehv | libkrun |
+|---------|---------|---------|
+| **CPU Limit** | ✅ Flexible (10+ cores) | ❌ Hard-coded 8 cores |
+| **Stability** | ✅ Native macOS support | ⚠️ Limited support |
+| **GPU Passthrough** | ❌ Not available | ✅ Supported |
+| **Isolation** | ⚠️ Basic | ✅ Advanced |
+| **Customization** | ⚠️ Limited | ✅ Extensive |
+
+### 💾 Memory Optimization
+
+> ⚠️ **Issue**: Default machine configuration may cause high memory utilization
+
+**Problem**: Default `podman-wxd` machine (10 cores, 16GB RAM) often reaches 98% memory utilization.
+
+#### ✅ Solution: Pre-create Optimized Machine
+
+```bash
+podman machine stop
+export CONTAINERS_MACHINE_PROVIDER=applehv
+podman machine init --cpus 10 --memory 24576 --rootful podman-wxd
+podman machine start podman-wxd
 ```
+
+### 🔧 Spark OLAP Missing Keyspace
+
+> ⚠️ **Issue**: Sample data generation fails due to missing keyspace/table
+
+**Problem**: The `LoadCustomerOrdersById` step fails when keyspace and table don't exist.
+
+#### ✅ Solution: Create Required Schema
+
+```sql
+-- Connect to CQL shell
+./hcd-1.2.3/bin/cqlsh
+
+-- Create keyspace and table
+CREATE KEYSPACE retail_ks WITH replication = {'class': 'SimpleStrategy', 'replication_factor': 1};
+CREATE TABLE IF NOT EXISTS customer_orders_by_id (
+    customer_id uuid, 
+    order_id uuid, 
+    order_date timestamp, 
+    status text, 
+    PRIMARY KEY (customer_id, order_id)
+);
+```
+
+---
+
+<div align="center">
+
+**🎉 Congratulations! You've successfully set up converged workloads with IBM watsonx.data and DataStax HCD!**
+
+*For additional support, please refer to the official documentation or contact your IBM representative.*
+
+</div>
