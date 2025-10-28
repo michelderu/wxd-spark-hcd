@@ -18,3 +18,5 @@ VALUES (uuid(), 'Bob', 'bob@example.com', '2023-02-15');
 
 INSERT INTO users (id, name, email, signup_date)
 VALUES (uuid(), 'Charlie', 'charlie@example.com', '2023-03-10');
+
+SELECT * FROM users;
