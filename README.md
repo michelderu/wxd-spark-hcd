@@ -1,13 +1,14 @@
-# 🚀 Converged Workloads with IBM watsonx.data and DataStax HCD
+# 🚀 Converged Workloads with IBM and DataStax
 
 <div align="center">
 
 ![IBM watsonx.data](https://img.shields.io/badge/IBM-watsonx.data-blue?style=for-the-badge&logo=ibm)
-![DataStax HCD](https://img.shields.io/badge/DataStax-HCD-green?style=for-the-badge&logo=apache-cassandra)
+![DataStax HCD](https://img.shields.io/badge/DataStax-HCD-purple?style=for-the-badge&logo=datastax)
 ![Apache Spark](https://img.shields.io/badge/Apache-Spark-orange?style=for-the-badge&logo=apache-spark)
 ![Apache Iceberg](https://img.shields.io/badge/Apache-Iceberg-blue?style=for-the-badge)
 
-*A comprehensive guide to integrating operational and analytical workloads*
+*Upgrade from operational Cassandra to AI-ready analytics and governance with watsonx.data*
+
 
 </div>
 
@@ -60,9 +61,9 @@ This guide covers:
 | Component | Minimum | Recommended |
 |-----------|---------|-------------|
 | **Architecture** | x86_64 or ARM64 | x86_64 or ARM64 |
-| **CPU Cores** | 12 cores | 16+ cores |
-| **Memory** | 16GB RAM | 24GB+ RAM |
-| **Disk Space** | 100GB free | 200GB+ free |
+| **CPU Cores** | 10 cores | 16 cores |
+| **Memory** | 16GB RAM | 24GB RAM |
+| **Disk Space** | 150GB free | 200GB+ free |
 
 ### 🖥️ Supported Platforms
 - 🍎 **macOS** (Intel or Apple Silicon)
@@ -72,8 +73,8 @@ This guide covers:
 ### 📦 Required Software
 - **Docker/Podman** - Container runtime
 - **Kubernetes** - Container orchestration
-- **Java 17** - For DataStax HCD
-- **Maven** - For building Spark applications
+- **Java 11 or 17** - For DataStax HCD
+- **Maven** - For building Java applications
 
 ---
 
@@ -83,10 +84,10 @@ This guide covers:
 
 > ⏱️ **Installation Time**: The setup process may take 15-30 minutes depending on your system performance.
 
-1. **📥 Download & Install**
+1. **📥 Download & Install**  
    Follow the [IBM watsonx.data Developer Edition installation steps](https://www.ibm.com/docs/en/watsonxdata/standard/2.2.x?topic=developer-edition-new-version).
 
-2. **🔍 Verify Installation**
+2. **🔍 Verify Installation**  
    Check that all pods are running correctly:
    ```bash
    kubectl get pods -n wxd
@@ -98,7 +99,7 @@ This guide covers:
    export KUBECONFIG=~/.kube/config && nohup kubectl port-forward -n wxd service/lhconsole-ui-svc 6443:443 --address 0.0.0.0 > /dev/null 2>&1 &
    ```
 
-4. **✅ Test Access**
+4. **✅ Test Access**  
    Navigate to [https://localhost:6443/](https://localhost:6443/) and log in with:
    - **Username**: `ibmhladmin`
    - **Password**: `password`
@@ -161,7 +162,7 @@ This guide covers:
 
 4. **🔍 Test Connection**
    ```bash
-   ./hcd-1.2.3/bin/hcd cqlsh -u cassandra -p cassandra
+   ./hcd-1.2.3/bin/cqlsh -u cassandra -p cassandra
    ```
    
    Type `quit` to exit the CQL shell.
@@ -170,6 +171,8 @@ This guide covers:
    ```bash
    cqlsh -f sample-data.cql
    ```
+   
+> 🎉 **Success!** You have successfully installed HCD and loaded some sample data!
 
 ### C. Add HCD to watsonx.data
 
@@ -201,6 +204,8 @@ This guide covers:
    ![wxd-data-manager](./assets/wxd-data-manager.png)
    
    </div>
+
+> 🎉 **Success!** You have successfully configured watsonx.data to access HCD!
 
 ---
 
@@ -240,7 +245,7 @@ The first converged data integration leverages **federated analytics** using Pre
 
 > 🎯 **Goal**: Create materialized views for better performance and reduced operational system load
 
-Federated analytics can be stressful on operational systems handling massive workloads with low latency requirements. **Data Offloading** addresses this by materializing data into a governed catalog with associated Parquet files.
+Federated analytics can be stressful on operational systems handling massive workloads with low latency requirements. **Data Offloading** addresses this by materializing data into a governed catalog with associated Parquet files. Watsonx.data facilitates this process through `CREATE TABLE AS SELECT`.
 
 ### 💡 Benefits of Data Offloading
 - 🚀 **Reduced Operational Load** - Minimizes impact on production Cassandra clusters
@@ -283,6 +288,8 @@ Federated analytics can be stressful on operational systems handling massive wor
    
    </div>
 
+> 🎉 **Success!** You have successfully queried the newly created catalog, offloading query workload from the operational HCD database!
+
 ---
 
 ## ⚡ Utilizing the Spark Engine for Materialized Analytics
@@ -318,6 +325,10 @@ Many DataStax DSE customers require Spark capabilities for operational data anal
    ```
 
    > 🔍 **Verify Data**: Check data creation in watsonx.data Query workspace or via CQL:
+   > ```bash
+   > ./hcd-1.2.3/bin/cqlsh
+   > ```
+   > and run the following query:
    > ```sql
    > SELECT * FROM retail_ks.customer_orders_by_id;
    > ```
@@ -389,7 +400,7 @@ Many DataStax DSE customers require Spark capabilities for operational data anal
 ```bash
 podman machine stop
 export CONTAINERS_MACHINE_PROVIDER=applehv
-podman machine init --cpus 10 --memory 24576 --rootful podman-wxd
+podman machine init --cpus 10 --memory 16384 --rootful podman-wxd
 podman machine start podman-wxd
 ```
 
@@ -414,7 +425,7 @@ podman machine start podman-wxd
 ```bash
 podman machine stop
 export CONTAINERS_MACHINE_PROVIDER=applehv
-podman machine init --cpus 10 --memory 24576 --rootful podman-wxd
+podman machine init --cpus 12 --memory 24576 --rootful podman-wxd
 podman machine start podman-wxd
 ```
 
@@ -444,8 +455,6 @@ CREATE TABLE IF NOT EXISTS customer_orders_by_id (
 ---
 
 <div align="center">
-
-**🎉 Congratulations! You've successfully set up converged workloads with IBM watsonx.data and DataStax HCD!**
 
 *For additional support, please refer to the official documentation or contact your IBM representative.*
 
