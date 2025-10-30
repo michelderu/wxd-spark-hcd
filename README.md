@@ -101,7 +101,7 @@ This guide covers:
 
 4. **✅ Test Access**  
    Navigate to [https://localhost:6443/](https://localhost:6443/) and log in with:
-   - **Username**: `ibmhladmin`
+   - **Username**: `ibmlhadmin`
    - **Password**: `password`
 
    <div align="center">
