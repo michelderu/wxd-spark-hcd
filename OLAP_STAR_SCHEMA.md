@@ -1,4 +1,4 @@
-# Star Schema and Queries Analysis - cass_spark_iceberg
+# Star Schema and Queries - cass_spark_iceberg
 
 ## Overview
 

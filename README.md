@@ -309,7 +309,7 @@ This section uses the [cass_spark_iceberg repository](https://github.ibm.com/pra
 
 </div>
 
-For more information about the process, sequence, tables and queries see [OLAP_STAR_SCHEMA.md](./OLAP_STAR_SCHEMA.md).
+For more information about the process, sequence, tables and see [OLAP_STAR_SCHEMA.md](./OLAP_STAR_SCHEMA.md).
 
 ### 📋 Implementation Steps
 
