@@ -531,3 +531,5 @@ wxd-pg-postgres-0                                 1/1     Running     0         
 *For additional support, please refer to the official documentation or contact your IBM representative.*
 
 </div>
+
+/v1
