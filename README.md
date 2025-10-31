@@ -91,7 +91,7 @@ This guide covers:
    Check that all pods are running correctly:
    ```bash
    kubectl get pods -n wxd
-   kubectl get pods -n wxd | wc -l # should return 31
+   kubectl get pods -n wxd | wc -l # should return 22
    ```
 
 3. **🌐 Expose the UI**
@@ -142,7 +142,13 @@ This guide covers:
    tar -xzf hcd-1.2.3-bin.tar.gz
    ```
 
-2. **☕ Configure Java Environment**
+2. **Create the logging directory**
+   ```bash
+   sudo mkdir /var/log/cassandra
+   sudo chown $(whoami):$(id -gn) /var/log/cassandra
+   ```
+
+3. **☕ Configure Java Environment**
    ```bash
    # Set Java 17 environment (required for HCD)
    export JAVA_HOME="$(/usr/libexec/java_home -v17)"
@@ -150,7 +156,7 @@ This guide covers:
    export CASSANDRA_JDK_UNSUPPORTED=true
    ```
 
-3. **🚀 Start HCD**
+4. **🚀 Start HCD**
    ```bash
    ./hcd-1.2.3/bin/hcd cassandra
    ```
@@ -160,7 +166,7 @@ This guide covers:
    > INFO  [main] 2025-10-27 13:40:24,500 HcdDaemon.java:22 - HCD startup complete
    > ```
 
-4. **🔍 Test Connection**
+5. **🔍 Test Connection**
    ```bash
    ./hcd-1.2.3/bin/cqlsh -u cassandra -p cassandra
    ```
@@ -182,7 +188,9 @@ This guide covers:
    - Select `Cassandra` as a data source
    - Click `Next`
 
-2. **⚙️ Configuration Details**
+2. **⚙️ Configuration Details**  
+   Use the following configuration details:
+
    | Field | Value |
    |-------|-------|
    | **Display name** | `HCD` |
@@ -192,6 +200,8 @@ This guide covers:
    | **Password** | `cassandra` |
    | **Associate catalog** | ✅ Checked |
    | **Catalog name** | `hcd` |
+
+   Click `Create`.
 
 3. **✅ Verify Data Access**
    - Click the `hcd` catalog
@@ -260,6 +270,7 @@ Federated analytics can be stressful on operational systems handling massive wor
    - Select:
      - **Catalog**: `iceberg_data`
      - **Name**: `hcd_users`
+   - Click `Create`
 
 2. **📦 Transfer Data with CTAS**
    - Click `Query workspace` → `+` (new query tab)
@@ -321,7 +332,15 @@ This section uses the [cass_spark_iceberg repository](https://github.ibm.com/pra
      - **Associated catalogs**: `iceberg_data`
    - Click `Create`
 
-2. **📥 Clone and Build Sample Application**
+2. **📥 Clone and Build Sample Application**  
+   This step depends on the contactpoint for Cassandra to be set correctly in `.../utils/CassUtil.java` on line 17.
+
+   In order to find your configured datacenter name, check the Cassandra config or run:
+   ```bash
+   ./hcd-1.2.3/bin/nodetool status | grep Datacenter
+   ```
+   
+   Update `CassUtil.java` accordingly and build the app:
    ```bash
    # Clone the example repository
    git clone https://github.ibm.com/pravin-bhat/cass_spark_iceberg
@@ -333,6 +352,9 @@ This section uses the [cass_spark_iceberg repository](https://github.ibm.com/pra
    ```
 
 3. **📊 Generate Sample Data**
+
+   ⚠️ For this step to work correctly the correct keyspace and table have to be created. Please refer to [Troubleshooting](#️-troubleshooting) to create these tables in case the Java application does not create them.
+
    ```bash
    mvn exec:java -Dexec.mainClass="com.ibm.wxd.datalabs.demo.cass_spark_iceberg.LoadCustomerOrdersById"
    ```
@@ -351,7 +373,12 @@ This section uses the [cass_spark_iceberg repository](https://github.ibm.com/pra
    - Create buckets: `olap` and `spark-artifacts`
    - Upload JAR file: `cass-spark-iceberg-1.2.jar` → `spark-artifacts` bucket
 
-5. **🚀 Run OLAP Job**
+5. **📊 Monitor Execution**
+   - Execute logs watcher: `./spark-logs.sh`
+   - Click `Submit application`
+   - Kick off the next step and watch results in the logs watcher terminal 🎉
+
+6. **🚀 Run OLAP Job**
    - Navigate to `wx.d Infrastructure manager` → Click `Spark` engine
    - Click `Applications` → `Create application +`
    - Click `Payload` and paste the configuration:
@@ -382,10 +409,7 @@ This section uses the [cass_spark_iceberg repository](https://github.ibm.com/pra
    }
    ```
 
-6. **📊 Monitor Execution**
-   - Execute logs watcher: `./spark-logs.sh`
-   - Click `Submit application`
-   - Watch results in the logs watcher terminal 🎉
+   Now click `Submit application` and watch the logging window for output.
 
 ---
 
@@ -463,6 +487,40 @@ CREATE TABLE IF NOT EXISTS customer_orders_by_id (
     status text, 
     PRIMARY KEY (customer_id, order_id)
 );
+```
+
+### Which PODS should be running exactly?
+
+A healthy installation of wx.d developer edition should have 22 pods running.
+
+```bash
+kubectl -n wxd get pods
+```
+
+Will show the following pods:
+
+```
+generate-certs-and-truststore-fhpns               0/1     Completed   0          3d3h
+ibm-lh-control-plane-prereq-p6fl9                 0/1     Completed   0          3d3h
+ibm-lh-mds-rest-7f6d55c7f4-ql6h5                  1/1     Running     0          3d3h
+ibm-lh-mds-thrift-6794898844-xgxl7                1/1     Running     0          3d3h
+ibm-lh-minio-5fb9dffc57-mdqg8                     1/1     Running     0          3d3h
+ibm-lh-presto-5b66899b8c-94kwp                    1/1     Running     0          3d3h
+ibm-lh-validator-bc7dcccbb-6d9d9                  1/1     Running     0          3d3h
+image-pull-job-h2vhc                              0/1     Completed   0          3d3h
+lhams-api-7bb48b798-xnmds                         1/1     Running     0          3d3h
+lhconsole-api-6f6cb9f7b8-zffsx                    1/1     Running     0          3d3h
+lhconsole-nodeclient-666fb7f79d-p2m84             1/1     Running     0          3d3h
+lhconsole-ui-645dc7d649-n7j2x                     1/1     Running     0          3d3h
+lhingestion-api-7bdbd8b786-wd24f                  1/1     Running     0          3d3h
+spark-hb-control-plane-66547699c-jxbdg            2/2     Running     0          3d3h
+spark-hb-create-trust-store-758c8848c8-hw4sr      1/1     Running     0          3d3h
+spark-hb-deployer-agent-5dd65b47c6-bp8dk          2/2     Running     0          3d3h
+spark-hb-load-postgres-db-specs-44l4v             0/1     Completed   0          3d3h
+spark-hb-nginx-68944fd748-mhnng                   1/1     Running     0          3d3h
+spark-hb-register-hb-dataplane-6f9549976f-vg7lb   1/1     Running     0          3d2h
+spark-hb-ui-595c9588c8-j7m9z                      1/1     Running     0          3d3h
+wxd-pg-postgres-0                                 1/1     Running     0          3d3h
 ```
 
 ---
