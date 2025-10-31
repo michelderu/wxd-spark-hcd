@@ -170,6 +170,7 @@ This guide covers:
    ```bash
    ./hcd-1.2.3/bin/cqlsh -u cassandra -p cassandra
    ```
+   ⚠️ This step depends on Python to be installed.
    
    Type `quit` to exit the CQL shell.
 
