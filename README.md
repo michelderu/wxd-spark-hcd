@@ -5,7 +5,7 @@
 ![IBM watsonx.data](https://img.shields.io/badge/IBM-watsonx.data-blue?style=for-the-badge&logo=ibm)
 ![DataStax HCD](https://img.shields.io/badge/DataStax-HCD-purple?style=for-the-badge&logo=datastax)
 ![Apache Spark](https://img.shields.io/badge/Apache-Spark-orange?style=for-the-badge&logo=apache-spark)
-![Apache Iceberg](https://img.shields.io/badge/Apache-Iceberg-blue?style=for-the-badge)
+![Apache Iceberg](https://img.shields.io/badge/Apache-Iceberg-blue?style=for-the-badge&logo=apache)
 
 *Upgrade from operational Cassandra to AI-ready analytics and governance with watsonx.data*
 
