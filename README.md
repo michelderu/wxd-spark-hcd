@@ -68,7 +68,7 @@ This guide covers:
 ### 🖥️ Supported Platforms
 - 🍎 **macOS** (Intel or Apple Silicon)
 - 🪟 **Windows 10/11** 64-bit
-- 🐧 **Linux** (Ubuntu 20.04+, RHEL 8+)
+- 🐧 **Linux** (Ubuntu 20.04+, RHEL 8+, Fedora 43+)
 
 ### 📦 Required Software
 - **Docker/Podman** - Container runtime
@@ -80,27 +80,62 @@ This guide covers:
 
 ## 🔧 Installation Steps
 
-### A. IBM watsonx.data Developer Edition
+### A. Container runtime
+
+Ensure you have you runtime of choice set-up. Refer to [Containder Fundamentals](https://github.com/michelderu/container-fundamentals) and the specific setup instructions for your architecture [here](https://github.com/michelderu/container-fundamentals/blob/main/course/08-setup-linux-macos-windows.md).
+
+### B. IBM watsonx.data Developer Edition
 
 > ⏱️ **Installation Time**: The setup process may take 15-30 minutes depending on your system performance.
 
 1. **📥 Download & Install**  
-   Follow the [IBM watsonx.data Developer Edition installation steps](https://www.ibm.com/docs/en/watsonxdata/standard/2.2.x?topic=developer-edition-new-version).
+   Follow the [IBM watsonx.data Developer Edition installation steps](https://www.ibm.com/docs/en/watsonxdata/standard/2.3.x?topic=developer-edition-new-version).  
+   
+   > [!NOTE]
+   > Alternatively you can follow the DIY instructions [here](./wxd-manual-install.md).
 
 2. **🔍 Verify Installation**  
-   Check that all pods are running correctly:
+   Watch pods initializing:
    ```bash
-   kubectl get pods -n wxd
-   kubectl get pods -n wxd | wc -l # should return 22
+   watch kubectl get pods -n wxd
    ```
 
-3. **🌐 Expose the UI**
+   After a while, depending on your system this can take anything between a few minutes and 10's of minutes, you should see a similar status:
+
+   ```text
+   NAME                                              READY   STATUS      RESTARTS   AGE
+   generate-certs-and-truststore-lwmm6               0/1     Completed   0          11m
+   ibm-lh-control-plane-prereq-45hl9                 0/1     Completed   0          10m
+   ibm-lh-mds-rest-7cc9bd5c9b-px5xw                  1/1     Running     0          8m52s
+   ibm-lh-mds-thrift-679698fd56-22ldx                1/1     Running     0          8m52s
+   ibm-lh-minio-7b6dfc69f8-88xgh                     1/1     Running     0          8m52s
+   ibm-lh-presto-5d8bfdbd77-892cw                    1/1     Running     0          8m52s
+   ibm-lh-validator-7877c94d95-j47qx                 1/1     Running     0          8m52s
+   image-pull-job-wzxfv                              0/1     Completed   0          8m51s
+   lhams-api-64874857bc-wndfz                        1/1     Running     0          8m53s
+   lhconsole-api-6767df9d79-xjxq4                    1/1     Running     0          8m53s
+   lhconsole-nodeclient-84fbc5b998-kb4pj             1/1     Running     0          8m53s
+   lhconsole-ui-79bd784dc9-zxmz2                     1/1     Running     0          8m52s
+   lhingestion-api-846498cb98-ntlm5                  1/1     Running     0          8m52s
+   spark-hb-control-plane-975c76d8-qmkd9             2/2     Running     0          8m51s
+   spark-hb-create-trust-store-9d577b768-2gsds       1/1     Running     0          9m9s
+   spark-hb-deployer-agent-c5444448c-kpzmd           2/2     Running     0          8m51s
+   spark-hb-load-postgres-db-specs-vgwrz             0/1     Completed   0          9m9s
+   spark-hb-nginx-8647978c8-g69fv                    1/1     Running     0          8m51s
+   spark-hb-register-hb-dataplane-6dd49b8f84-v9lbd   1/1     Running     0          5m36s
+   spark-hb-ui-c5bb88ccd-vjmhf                       1/1     Running     0          8m51s
+   wxd-pg-postgres-0                                 1/1     Running     0          10m
+   ```
+
+3. **🌐 Expose the UI**  
+   Forwarding on `0.0.0.0` lets other hosts reference your machine IP:
+
    ```bash
-   export KUBECONFIG=~/.kube/config && nohup kubectl port-forward -n wxd service/lhconsole-ui-svc 6443:443 --address 0.0.0.0 > /dev/null 2>&1 &
+   nohup kubectl port-forward -n wxd service/lhconsole-ui-svc 6443:443 --address 0.0.0.0 2>&1 &
    ```
 
 4. **✅ Test Access**  
-   Navigate to [https://localhost:6443/](https://localhost:6443/) and log in with:
+   Navigate to [https://localhost:6443/](https://localhost:6443/) (Expect a browser warning for the Development/TLS certificate) and log in with the defaults (unless you changed them):
    - **Username**: `ibmlhadmin`
    - **Password**: `password`
 
@@ -113,13 +148,13 @@ This guide covers:
 5. **🔧 Optional: Access MinIO and MDS**
    ```bash
    # MinIO (Object Storage)
-   export KUBECONFIG=~/.kube/config && nohup kubectl port-forward -n wxd service/ibm-lh-minio-svc 9001:9001 --address 0.0.0.0 > /dev/null 2>&1 &
+   nohup kubectl port-forward -n wxd service/ibm-lh-minio-svc 9001:9001 --address 0.0.0.0 > /dev/null 2>&1 &
    
    # MDS (Metadata Service)
-   export KUBECONFIG=~/.kube/config && nohup kubectl port-forward -n wxd service/ibm-lh-mds-thrift-svc 8381:8381 --address 0.0.0.0 > /dev/null 2>&1 &
+   nohup kubectl port-forward -n wxd service/ibm-lh-mds-thrift-svc 8381:8381 --address 0.0.0.0 > /dev/null 2>&1 &
    ```
 
-   > 📖 **Reference**: See the [IBM watsonx.data documentation](https://www.ibm.com/docs/en/watsonxdata/standard/2.2.x?topic=administering-exposing-minio-service) for more information.
+   > 📖 **Reference**: See the [IBM watsonx.data documentation](https://www.ibm.com/docs/en/watsonxdata/standard/2.3.x?topic=administering-exposing-minio-service) for more information.
 
    Access MinIO at [http://localhost:9001/](http://localhost:9001/) with credentials:
    - **Username**: `dummyvalue`
@@ -131,57 +166,54 @@ This guide covers:
    
    </div>
 
-### B. DataStax Hyper-Converged Database
+### C. DataStax Hyper-Converged Database
+In case you have access to HCD please install according to the [instructions here](./hcd-install.md). Otherwise substitute HCD with **Apache Cassandra 5** in Docker. It does not provide HCD enterprise features but is enough to exercise watsonx.data against Cassandra.
 
-1. **📥 Download & Extract**
+1. **🐳 Run Cassandra 5 in Docker**
+
+   From the repository root (so `sample-data.cql` is on the host path used below):
+
    ```bash
-   # Download the HCD tarball
-   wget http://downloads.datastax.com/hcd/hcd-1.2.3-bin.tar.gz
-   
-   # Extract the archive
-   tar -xzf hcd-1.2.3-bin.tar.gz
+   docker run -d --name wxd-cassandra \
+     -p 9042:9042 \
+     -v "$(pwd)/sample-data.cql:/schema/sample-data.cql:ro" \
+     cassandra:5.0
    ```
 
-2. **Create the logging directory**
+   Wait until the node listens (first boot can take a minute or two):
+
    ```bash
-   sudo mkdir /var/log/cassandra
-   sudo chown $(whoami):$(id -gn) /var/log/cassandra
+   docker logs -f wxd-cassandra
    ```
 
-3. **☕ Configure Java Environment**
+   > ✅ **Success indicator**: logs contain a Cassandra startup completion line such as `Startup complete`.
+
+   Press `Ctrl+C` to stop following logs; the container keeps running.
+
+2. **🔍 Test `cqlsh` inside the container**
+
    ```bash
-   # Set Java 17 environment (required for HCD)
-   export JAVA_HOME="$(/usr/libexec/java_home -v17)"
-   export PATH="$JAVA_HOME/bin:$PATH"
-   export CASSANDRA_JDK_UNSUPPORTED=true
+   docker exec -it wxd-cassandra cqlsh -u cassandra -p cassandra
    ```
 
-4. **🚀 Start HCD**
-   ```bash
-   ./hcd-1.2.3/bin/hcd cassandra
-   ```
-
-   > ✅ **Success Indicator**: Look for this message in the logs:
-   > ```
-   > INFO  [main] 2025-10-27 13:40:24,500 HcdDaemon.java:22 - HCD startup complete
-   > ```
-
-5. **🔍 Test Connection**
-   ```bash
-   ./hcd-1.2.3/bin/cqlsh -u cassandra -p cassandra
-   ```
-   ⚠️ This step depends on Python to be installed.
-   
    Type `quit` to exit the CQL shell.
 
-5. **📊 Load Sample Data**
-   ```bash
-   cqlsh -f sample-data.cql
-   ```
-   
-> 🎉 **Success!** You have successfully installed HCD and loaded some sample data!
+3. **📊 Load sample data**
 
-### C. Add HCD to watsonx.data
+   ```bash
+   docker exec -i wxd-cassandra cqlsh -u cassandra -p cassandra -f /schema/sample-data.cql
+   ```
+
+4. **🧹 Stop or remove the container (when finished)**
+
+   ```bash
+   docker stop wxd-cassandra
+   docker rm wxd-cassandra
+   ```
+
+> 🎉 **Success!** Cassandra is listening on **localhost:9042** and the sample schema/data are loaded. Use the connection values in the next section when you register the catalog in watsonx.data (from the cluster, `host.containers.internal` and port **9042** as in the table below).
+
+### C. Add HCD (or Cassandra) to watsonx.data
 
 1. **🔗 Connect HCD to watsonx.data**
    - Navigate to [https://localhost:6443/#/infrastructure-manager](https://localhost:6443/#/infrastructure-manager)
@@ -195,19 +227,32 @@ This guide covers:
    | Field | Value |
    |-------|-------|
    | **Display name** | `HCD` |
-   | **Hostname** | `host.containers.internal` |
+   | **Hostname** | Use your machine’s public IP address (find with `curl ifconfig.me` or `hostname -I | awk '{print $1}'`) |
    | **Port** | `9042` |
    | **Username** | `cassandra` |
    | **Password** | `cassandra` |
+
+   Now first click `Test connection`. Then continue configuration:
+
+   | Field | Value |
+   |-------|-------|
    | **Associate catalog** | ✅ Checked |
    | **Catalog name** | `hcd` |
 
    Click `Create`.
 
-3. **✅ Verify Data Access**
-   - Click the `hcd` catalog
-   - Click `Data Objects`
-   - Expand `sample_ks` and click `users`
+3. **🔗 Associate the HCD Catalog with Presto**
+   - Within the watsonx.data UI, once your HCD (Cassandra) catalog has been created, you need to associate it with the Presto query engine to enable SQL querying on Cassandra data.
+   - Navigate to the Infrastructure Manager by clicking the "Infrastructure Manager" section.
+   - Hover over the `hcd` catalog and click on `Manage associations`.
+   - Locate your newly created `hcd` catalog and add it to Presto.
+   - Select the `presto-01` engine and click `Save and restart Engine`.
+   - Once the association is complete and Presto has restarted, your Cassandra data is available as SQL tables in Presto.
+
+4. **✅ Verify Data Access**
+   - Navigate to `Data Manager`.
+   - Expand the `hcd` catalog and the `sample_ks` keyspace.
+   - Click the `users` table.
    - Click `Data sample` and confirm the 3 users are present
 
    <div align="center">
@@ -228,16 +273,9 @@ The first converged data integration leverages **federated analytics** using Pre
 
 ### 📋 Steps
 
-1. **🔗 Associate HCD Catalog with Presto**
-   - Click `Presto` in the Infrastructure Manager
-   - Click `Manage associations`
-   - Add `hcd` catalog
-   - Click `Save and restart engine`
-
-2. **🔍 Query Operational Data**
+1. **🔍 Query Operational Data**
    - Open `Query workspace` from the left sidebar
-   - Ensure `Presto` is selected as the active engine
-   - Run the following query:
+   - Run the following query, while ensuring `Presto` is selected as the active engine:
    ```sql
    SELECT * FROM hcd.sample_ks.users;
    ```
@@ -311,7 +349,7 @@ Federated analytics can be stressful on operational systems handling massive wor
 Many DataStax DSE customers require Spark capabilities for operational data analytics. With watsonx.data, you can achieve seamless synergy between operational and analytical processing using the Hyper-Converged Database (HCD).
 
 This section uses the [cass_spark_iceberg repository](https://github.ibm.com/pravin-bhat/cass_spark_iceberg) that:
-1. Pulls the operation data from HCD
+1. Pulls the operational data from HCD
 2. Turns it into analytical data using a Star-schema and stores in Iceberg tables
 3. Runs several analytical queries on the Iceberg tables, offloading workload from HCD
 
@@ -326,10 +364,10 @@ This section uses the [cass_spark_iceberg repository](https://github.ibm.com/pra
 ### 📋 Implementation Steps
 
 1. **🔧 Create Spark Engine**
-   - Click `Infrastructure manager`
+   - Click `Infrastructure manager` and click 'Add component`
    - Select `IBM Spark` → `Next`
    - Configure:
-     - **Display name**: `Spark`
+     - **Display name**: `spark-01`
      - **Associated catalogs**: `iceberg_data`
    - Click `Create`
 
@@ -337,16 +375,29 @@ This section uses the [cass_spark_iceberg repository](https://github.ibm.com/pra
    This step depends on the contactpoint for Cassandra to be set correctly in `.../utils/CassUtil.java` on line 17.
 
    In order to find your configured datacenter name, check the Cassandra config or run:
+
+   **Standalone HCD binary:**
+
    ```bash
    ./hcd-1.2.3/bin/nodetool status | grep Datacenter
    ```
+   **Using Docker Cassandra:**
+
+   ```bash
+   docker exec -it wxd-cassandra nodetool status | grep Datacenter
+   ```
    
-   Update `CassUtil.java` accordingly and build the app:
+   First clone the app:
    ```bash
    # Clone the example repository
-   git clone https://github.ibm.com/pravin-bhat/cass_spark_iceberg
+   git clone git@github.ibm.com:pravin-bhat/cass_spark_iceberg.git
    cd cass_spark_iceberg
-   
+   ```
+
+   Then (optionally if required) update the `DATACENTER` value in `cass_spark_iceberg/src/main/java/com/ibm/wxd/datalabs/demo/cass_spark_iceberg/utils/CassUtil.java`.
+
+   Now build the app
+   ```
    # Update Cassandra connection settings in CassUtil.java
    # Build the application
    mvn clean package
@@ -354,43 +405,52 @@ This section uses the [cass_spark_iceberg repository](https://github.ibm.com/pra
 
 3. **📊 Generate Sample Data**
 
-   ⚠️ For this step to work correctly the correct keyspace and table have to be created. Please refer to [Troubleshooting](#️-troubleshooting) to create these tables in case the Java application does not create them.
-
+   This steps utilized the 
    ```bash
    mvn exec:java -Dexec.mainClass="com.ibm.wxd.datalabs.demo.cass_spark_iceberg.LoadCustomerOrdersById"
    ```
 
-   > 🔍 **Verify Data**: Check data creation in watsonx.data Query workspace or via CQL:
-   > ```bash
-   > ./hcd-1.2.3/bin/cqlsh
-   > ```
-   > and run the following query:
-   > ```sql
-   > SELECT * FROM retail_ks.customer_orders_by_id;
-   > ```
+   🔍 **Verify Data**: Check data creation in watsonx.data Query workspace or via CQL.
+
+   **Standalone HCD binary:**
+
+   ```bash
+   ./hcd-1.2.3/bin/cqlsh
+   ```
+   **Using Docker Cassandra:**
+
+   ```bash
+   docker exec -it wxd-cassandra cqlsh -u cassandra -p cassandra
+   ```
+
+   Then run the following query:
+
+   ```sql
+   SELECT * FROM retail_ks.customer_orders_by_id;
+   ```
 
 4. **🪣 Prepare MinIO S3 Buckets**
-   - Ensure MinIO service is port-forwarded (see [Section A](#a-ibm-watsonxdata-developer-edition))
+   - Ensure MinIO service is port-forwarded (see [Section B](#b-ibm-watsonxdata-developer-edition))
+   - Navigate to http://localhost:9001/login and login with `dummyvalue` / `dummyvalue`.
    - Create buckets: `olap` and `spark-artifacts`
-   - Upload JAR file: `cass-spark-iceberg-1.2.jar` → `spark-artifacts` bucket
+   - Upload JAR file: `cass-spark-iceberg-1.7.jar` → `spark-artifacts` bucket
 
 5. **📊 Monitor Execution**
-   - Execute logs watcher: `./spark-logs.sh`
-   - Click `Submit application`
+   - Execute logs watcher from the root of the repo: `../spark-logs.sh`
    - Kick off the next step and watch results in the logs watcher terminal 🎉
 
 6. **🚀 Run OLAP Job**
    - Navigate to `wx.d Infrastructure manager` → Click `Spark` engine
    - Click `Applications` → `Create application +`
-   - Click `Payload` and paste the configuration:
+   - Click `Payload` and paste the configuration while ensuring to replace `spark.cassandra.connection.host` with your machine's IP address:
 
    ```json
    {
        "application_details": {
-           "application": "s3a://spark-artifacts/cass-spark-iceberg-1.2.jar",
+           "application": "s3a://spark-artifacts/cass-spark-iceberg-1.7.jar",
            "class": "com.ibm.wxd.datalabs.demo.cass_spark_iceberg.CassandraToIceberg",
            "conf": {
-               "spark.cassandra.connection.host": "host.containers.internal",
+               "spark.cassandra.connection.host": "<YOUR-IP-HERE>>",
                "spark.cassandra.auth.username": "cassandra",
                "spark.cassandra.auth.password": "cassandra",
                "spark.sql.catalog.spark_catalog.warehouse": "s3a://olap/",
@@ -418,111 +478,9 @@ This section uses the [cass_spark_iceberg repository](https://github.ibm.com/pra
 
 | Resource | Description | Link |
 |----------|-------------|------|
-| **IBM watsonx.data Documentation** | Official installation guide | [Developer Edition Setup](https://www.ibm.com/docs/en/watsonxdata/standard/2.2.x?topic=developer-edition-new-version) |
+| **IBM watsonx.data Documentation** | Official installation guide | [Developer Edition Setup](https://www.ibm.com/docs/en/watsonxdata/standard/2.3.x?topic=developer-edition-new-version) |
 | **DataStax HCD Integration** | GitHub repository with integration examples | [wx.d-developers-edition-add-hcd](https://github.ibm.com/Data-Labs/wx.d-developers-edition-add-hcd) |
 | **Spark Iceberg Example** | Sample application by Pravin Bhat | [cass_spark_iceberg](https://github.ibm.com/pravin-bhat/cass_spark_iceberg) |
-| **macOS Container GPU** | Technical article on enabling containers GPU on macOS | [Enabling Containers GPU macOS](https://sinrega.org/2024-03-06-enabling-containers-gpu-macos) |
-
----
-
-## 🛠️ Troubleshooting
-
-### 🍎 Podman on Apple Silicon
-
-> ⚠️ **Issue**: LibKrun limitation on Apple Silicon machines
-
-**Problem**: LibKrun (used by Podman Desktop on Apple Silicon) is limited to 8 cores, but watsonx.data Developer Edition requires at least 10 cores.
-
-#### ✅ Solution: Switch to applehv
-
-```bash
-podman machine stop
-export CONTAINERS_MACHINE_PROVIDER=applehv
-podman machine init --cpus 10 --memory 16384 --rootful podman-wxd
-podman machine start podman-wxd
-```
-
-#### 📊 Comparison: applehv vs libkrun
-
-| Feature | applehv | libkrun |
-|---------|---------|---------|
-| **CPU Limit** | ✅ Flexible (10+ cores) | ❌ Hard-coded 8 cores |
-| **Stability** | ✅ Native macOS support | ⚠️ Limited support |
-| **GPU Passthrough** | ❌ Not available | ✅ Supported |
-| **Isolation** | ⚠️ Basic | ✅ Advanced |
-| **Customization** | ⚠️ Limited | ✅ Extensive |
-
-### 💾 Memory Optimization
-
-> ⚠️ **Issue**: Default machine configuration may cause high memory utilization
-
-**Problem**: Default `podman-wxd` machine (10 cores, 16GB RAM) often reaches 98% memory utilization.
-
-#### ✅ Solution: Pre-create Optimized Machine
-
-```bash
-podman machine stop
-export CONTAINERS_MACHINE_PROVIDER=applehv
-podman machine init --cpus 12 --memory 24576 --rootful podman-wxd
-podman machine start podman-wxd
-```
-
-### 🔧 Spark OLAP Missing Keyspace
-
-> ⚠️ **Issue**: Sample data generation fails due to missing keyspace/table
-
-**Problem**: The `LoadCustomerOrdersById` step fails when keyspace and table don't exist.
-
-#### ✅ Solution: Create Required Schema
-
-```sql
--- Connect to CQL shell
-./hcd-1.2.3/bin/cqlsh
-
--- Create keyspace and table
-CREATE KEYSPACE retail_ks WITH replication = {'class': 'SimpleStrategy', 'replication_factor': 1};
-CREATE TABLE IF NOT EXISTS customer_orders_by_id (
-    customer_id uuid, 
-    order_id uuid, 
-    order_date timestamp, 
-    status text, 
-    PRIMARY KEY (customer_id, order_id)
-);
-```
-
-### Which PODS should be running exactly?
-
-A healthy installation of wx.d developer edition should have 22 pods running.
-
-```bash
-kubectl -n wxd get pods
-```
-
-Will show the following pods:
-
-```
-generate-certs-and-truststore-fhpns               0/1     Completed   0          3d3h
-ibm-lh-control-plane-prereq-p6fl9                 0/1     Completed   0          3d3h
-ibm-lh-mds-rest-7f6d55c7f4-ql6h5                  1/1     Running     0          3d3h
-ibm-lh-mds-thrift-6794898844-xgxl7                1/1     Running     0          3d3h
-ibm-lh-minio-5fb9dffc57-mdqg8                     1/1     Running     0          3d3h
-ibm-lh-presto-5b66899b8c-94kwp                    1/1     Running     0          3d3h
-ibm-lh-validator-bc7dcccbb-6d9d9                  1/1     Running     0          3d3h
-image-pull-job-h2vhc                              0/1     Completed   0          3d3h
-lhams-api-7bb48b798-xnmds                         1/1     Running     0          3d3h
-lhconsole-api-6f6cb9f7b8-zffsx                    1/1     Running     0          3d3h
-lhconsole-nodeclient-666fb7f79d-p2m84             1/1     Running     0          3d3h
-lhconsole-ui-645dc7d649-n7j2x                     1/1     Running     0          3d3h
-lhingestion-api-7bdbd8b786-wd24f                  1/1     Running     0          3d3h
-spark-hb-control-plane-66547699c-jxbdg            2/2     Running     0          3d3h
-spark-hb-create-trust-store-758c8848c8-hw4sr      1/1     Running     0          3d3h
-spark-hb-deployer-agent-5dd65b47c6-bp8dk          2/2     Running     0          3d3h
-spark-hb-load-postgres-db-specs-44l4v             0/1     Completed   0          3d3h
-spark-hb-nginx-68944fd748-mhnng                   1/1     Running     0          3d3h
-spark-hb-register-hb-dataplane-6f9549976f-vg7lb   1/1     Running     0          3d2h
-spark-hb-ui-595c9588c8-j7m9z                      1/1     Running     0          3d3h
-wxd-pg-postgres-0                                 1/1     Running     0          3d3h
-```
 
 ---
 
@@ -532,4 +490,4 @@ wxd-pg-postgres-0                                 1/1     Running     0         
 
 </div>
 
-/v1
+/v2
