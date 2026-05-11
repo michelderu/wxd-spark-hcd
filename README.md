@@ -16,20 +16,25 @@
 
 ## 📋 Table of Contents
 
-- [🎯 Overview](#-overview)
-- [⚙️ Prerequisites](#️-prerequisites)
-- [🔧 Installation Steps](#-installation-steps)
-  - [A. IBM watsonx.data Developer Edition](#a-ibm-watsonxdata-developer-edition)
-  - [B. DataStax Hyper-Converged Database](#b-datastax-hyper-converged-database)
-  - [C. Add HCD to watsonx.data](#c-add-hcd-to-watsonxdata)
-- [🔍 Federated Analytics](#-federated-analytics)
-- [📊 Materialized Analytics using wx.d CTAS](#-materialized-analytics-using-wxd-ctas)
-- [⚡ Utilizing the Spark Engine](#-utilizing-the-spark-engine-for-materialized-analytics)
-- [📚 References](#-references)
-- [🛠️ Troubleshooting](#️-troubleshooting)
+- [🎯 Overview](#overview)
+- [⚙️ Prerequisites](#prerequisites)
+- [🔧 Installation Steps](#installation-steps)
+  - [A. Container runtime](#a-container-runtime)
+  - [B. IBM watsonx.data Developer Edition](#b-ibm-watsonxdata-developer-edition)
+  - [C. DataStax Hyper-Converged Database](#c-datastax-hyper-converged-database)
+  - [C. Add HCD (here substituted by Cassandra) to watsonx.data](#c-add-hcd-here-substituted-by-cassandra-to-watsonxdata)
+- [🔍 Federated Analytics](#federated-analytics)
+- [📊 Materialized Analytics using wx.d CTAS](#materialized-analytics-using-wxd-ctas)
+- [⚡ Utilizing the Spark Engine for Materialized Analytics](#utilizing-the-spark-engine-for-materialized-analytics)
+- [📈 Running OLAP queries on watsonx.data](#running-olap-queries-on-watsonxdata)
+- [🧹 Pause, restart, and cleanup](#pause-restart-and-cleanup)
+  - [Pause and restart](#pause-and-restart)
+  - [Cleanup (tear down)](#cleanup-tear-down)
+- [📚 References](#references)
 
 ---
 
+<a id="overview"></a>
 ## 🎯 Overview
 
 <div align="center">
@@ -44,7 +49,7 @@ Facilitate seamless integration of **DataStax HCD (Cassandra)** to manage extens
 ### 📖 Scope
 This guide covers:
 - ✅ Installation of IBM watsonx.data Developer Edition
-- ✅ Setup of DataStax Hyper-Converged Database (HCD)
+- ✅ Operational **Apache Cassandra 5** in Docker (same integration patterns you use with **DataStax HCD** in production)
 - ✅ Integration between operational and analytical systems
 - ✅ Real-time data synchronization using Apache Spark
 - ✅ Materialized analytics with Apache Iceberg tables
@@ -54,6 +59,7 @@ This guide covers:
 - 🔧 **Customer Engineers** - Solution deployment
 - 💼 **Pre-sales Professionals** - Solution demonstration
 
+<a id="prerequisites"></a>
 ## ⚙️ Prerequisites
 
 ### 💻 System Requirements
@@ -73,17 +79,20 @@ This guide covers:
 ### 📦 Required Software
 - **Docker/Podman** - Container runtime
 - **Kubernetes** - Container orchestration
-- **Java 11 or 17** - For DataStax HCD
+- **Java 11 or 17** - For building and running the sample Spark/Cassandra Java project (`mvn`)
 - **Maven** - For building Java applications
 
 ---
 
+<a id="installation-steps"></a>
 ## 🔧 Installation Steps
 
+<a id="a-container-runtime"></a>
 ### A. Container runtime
 
-Ensure you have you runtime of choice set-up. Refer to [Containder Fundamentals](https://github.com/michelderu/container-fundamentals) and the specific setup instructions for your architecture [here](https://github.com/michelderu/container-fundamentals/blob/main/course/08-setup-linux-macos-windows.md).
+Ensure you have your runtime of choice set up. Refer to [Container Fundamentals](https://github.com/michelderu/container-fundamentals) and the specific setup instructions for your architecture [here](https://github.com/michelderu/container-fundamentals/blob/main/course/08-setup-linux-macos-windows.md).
 
+<a id="b-ibm-watsonxdata-developer-edition"></a>
 ### B. IBM watsonx.data Developer Edition
 
 > ⏱️ **Installation Time**: The setup process may take 15-30 minutes depending on your system performance.
@@ -100,7 +109,7 @@ Ensure you have you runtime of choice set-up. Refer to [Containder Fundamentals]
    watch kubectl get pods -n wxd
    ```
 
-   After a while, depending on your system this can take anything between a few minutes and 10's of minutes, you should see a similar status:
+   After a few minutes to tens of minutes (depending on your system), you should see a similar status:
 
    ```text
    NAME                                              READY   STATUS      RESTARTS   AGE
@@ -166,8 +175,10 @@ Ensure you have you runtime of choice set-up. Refer to [Containder Fundamentals]
    
    </div>
 
+<a id="c-datastax-hyper-converged-database"></a>
 ### C. DataStax Hyper-Converged Database
-In case you have access to HCD please install according to the [instructions here](./hcd-install.md). Otherwise substitute HCD with **Apache Cassandra 5** in Docker. It does not provide HCD enterprise features but is enough to exercise watsonx.data against Cassandra.
+
+**DataStax Hyper-Converged Database (HCD)** is DataStax’s Cassandra-compatible platform for large-scale operational workloads. In customer environments the cluster you register in watsonx.data is often HCD (or DSE or Astra). **This lab uses Apache Cassandra 5 in Docker** so you can follow the same catalog, federated SQL, Spark, and Iceberg steps without a separate HCD deployment.
 
 1. **🐳 Run Cassandra 5 in Docker**
 
@@ -204,19 +215,13 @@ In case you have access to HCD please install according to the [instructions her
    docker exec -i wxd-cassandra cqlsh -u cassandra -p cassandra -f /schema/sample-data.cql
    ```
 
-4. **🧹 Stop or remove the container (when finished)**
-
-   ```bash
-   docker stop wxd-cassandra
-   docker rm wxd-cassandra
-   ```
-
 > 🎉 **Success!** Cassandra is listening on **localhost:9042** and the sample schema/data are loaded. Use the connection values in the next section when you register the catalog in watsonx.data (from the cluster, `host.containers.internal` and port **9042** as in the table below).
 
-### C. Add HCD (or Cassandra) to watsonx.data
+<a id="c-add-hcd-here-substituted-by-cassandra-to-watsonxdata"></a>
+### C. Add HCD (here substituted by Cassandra) to watsonx.data
 
 1. **🔗 Connect HCD to watsonx.data**
-   - Navigate to [https://localhost:6443/#/infrastructure-manager](https://localhost:6443/#/infrastructure-manager)
+   - Navigate to [Infrastructure Manager](https://localhost:6443/#/infrastructure-manager)
    - Click `Add component`
    - Select `Cassandra` as a data source
    - Click `Next`
@@ -227,10 +232,15 @@ In case you have access to HCD please install according to the [instructions her
    | Field | Value |
    |-------|-------|
    | **Display name** | `HCD` |
-   | **Hostname** | Use your machine’s public IP address (find with `curl ifconfig.me` or `hostname -I | awk '{print $1}'`) |
+   | **Hostname** | IP address of this machine that watsonx.data can reach (often your **local** IP or `host.docker.internal`; see below) |
    | **Port** | `9042` |
    | **Username** | `cassandra` |
    | **Password** | `cassandra` |
+
+   **🏠 Finding your LAN IP for Hostname (pick your OS):**
+   - **🐧 Linux:** `hostname -I | awk '{print $1}'` (first address listed; use the interface that reaches your Kubernetes cluster if several appear)
+   - **🍎 macOS:** `ipconfig getifaddr en0` — Wi-Fi is often `en0`; try `en1` or **System Settings → Network** if that returns nothing
+   - **🪟 Windows (Command Prompt or PowerShell):** run `ipconfig` and use the **IPv4 Address** on your active Ethernet or Wi-Fi adapter (skip Default Switch / Hyper-V adapters unless the cluster reaches you through those)
 
    Now first click `Test connection`. Then continue configuration:
 
@@ -241,8 +251,11 @@ In case you have access to HCD please install according to the [instructions her
 
    Click `Create`.
 
-3. **🔗 Associate the HCD Catalog with Presto**
-   - Within the watsonx.data UI, once your HCD (Cassandra) catalog has been created, you need to associate it with the Presto query engine to enable SQL querying on Cassandra data.
+   ![wxd-cassandra-connection](./assets/wxd-cassandra-connection.png)
+
+3. **🔗 Associate the HCD Catalog with Presto**  
+   Within the watsonx.data UI, once your HCD (Cassandra) catalog has been created, you need to associate it with the Presto query engine to enable SQL querying on Cassandra data.
+
    - Navigate to the Infrastructure Manager by clicking the "Infrastructure Manager" section.
    - Hover over the `hcd` catalog and click on `Manage associations`.
    - Locate your newly created `hcd` catalog and add it to Presto.
@@ -253,7 +266,7 @@ In case you have access to HCD please install according to the [instructions her
    - Navigate to `Data Manager`.
    - Expand the `hcd` catalog and the `sample_ks` keyspace.
    - Click the `users` table.
-   - Click `Data sample` and confirm the 3 users are present
+   - Click `Data sample` and confirm the three users are present.
 
    <div align="center">
    
@@ -265,6 +278,7 @@ In case you have access to HCD please install according to the [instructions her
 
 ---
 
+<a id="federated-analytics"></a>
 ## 🔍 Federated Analytics
 
 > 🎯 **Goal**: Query operational Cassandra data directly using SQL through Presto query engine
@@ -290,6 +304,7 @@ The first converged data integration leverages **federated analytics** using Pre
 
 ---
 
+<a id="materialized-analytics-using-wxd-ctas"></a>
 ## 📊 Materialized Analytics using wx.d CTAS
 
 > 🎯 **Goal**: Create materialized views for better performance and reduced operational system load
@@ -338,10 +353,11 @@ Federated analytics can be stressful on operational systems handling massive wor
    
    </div>
 
-> 🎉 **Success!** You have successfully queried the newly created catalog, offloading query workload from the operational HCD database!
+> 🎉 **Success!** You have successfully queried the newly created catalog, offloading query workload from the operational Cassandra tier—the same integration pattern customers use with **DataStax HCD**.
 
 ---
 
+<a id="utilizing-the-spark-engine-for-materialized-analytics"></a>
 ## ⚡ Utilizing the Spark Engine for Materialized Analytics
 
 > 🎯 **Goal**: Leverage Apache Spark for advanced data processing and analytics workloads
@@ -349,9 +365,9 @@ Federated analytics can be stressful on operational systems handling massive wor
 Many DataStax DSE customers require Spark capabilities for operational data analytics. With watsonx.data, you can achieve seamless synergy between operational and analytical processing using the Hyper-Converged Database (HCD).
 
 This section uses the [cass_spark_iceberg repository](https://github.ibm.com/pravin-bhat/cass_spark_iceberg) that:
-1. Pulls the operational data from HCD
-2. Turns it into analytical data using a Star-schema and stores in Iceberg tables
-3. Runs several analytical queries on the Iceberg tables, offloading workload from HCD
+1. Pulls operational data from your Cassandra-compatible cluster (the lab registers it as the `hcd` catalog; production is often **DataStax HCD**)
+2. Turns it into analytical data using a star schema and stores it in Iceberg tables
+3. Runs several analytical queries on the Iceberg tables, offloading workload from the operational tier
 
 <div align="center">
 
@@ -359,12 +375,12 @@ This section uses the [cass_spark_iceberg repository](https://github.ibm.com/pra
 
 </div>
 
-💡 For more information about the process, sequence, tables and see [OLAP-STAR-SCHEMA.md](./OLAP-STAR-SCHEMA.md).
+💡 For more information about the process, sequence, and tables, see [OLAP-STAR-SCHEMA.md](./OLAP-STAR-SCHEMA.md).
 
 ### 📋 Implementation Steps
 
 1. **🔧 Create Spark Engine**
-   - Click `Infrastructure manager` and click 'Add component`
+   - Click `Infrastructure Manager` and click `Add component`
    - Select `IBM Spark` → `Next`
    - Configure:
      - **Display name**: `spark-01`
@@ -372,16 +388,9 @@ This section uses the [cass_spark_iceberg repository](https://github.ibm.com/pra
    - Click `Create`
 
 2. **📥 Clone and Build Sample Application**  
-   This step depends on the contactpoint for Cassandra to be set correctly in `.../utils/CassUtil.java` on line 17.
+   This step depends on the Cassandra contact points being set correctly in `.../utils/CassUtil.java` on line 17.
 
-   In order to find your configured datacenter name, check the Cassandra config or run:
-
-   **Standalone HCD binary:**
-
-   ```bash
-   ./hcd-1.2.3/bin/nodetool status | grep Datacenter
-   ```
-   **Using Docker Cassandra:**
+   To find the configured datacenter name, run **nodetool** inside the Cassandra container from [section C](#c-datastax-hyper-converged-database):
 
    ```bash
    docker exec -it wxd-cassandra nodetool status | grep Datacenter
@@ -396,8 +405,9 @@ This section uses the [cass_spark_iceberg repository](https://github.ibm.com/pra
 
    Then (optionally if required) update the `DATACENTER` value in `cass_spark_iceberg/src/main/java/com/ibm/wxd/datalabs/demo/cass_spark_iceberg/utils/CassUtil.java`.
 
-   Now build the app
-   ```
+   Now build the app:
+
+   ```bash
    # Update Cassandra connection settings in CassUtil.java
    # Build the application
    mvn clean package
@@ -405,19 +415,13 @@ This section uses the [cass_spark_iceberg repository](https://github.ibm.com/pra
 
 3. **📊 Generate Sample Data**
 
-   This steps utilized the 
+   This step uses:
+
    ```bash
    mvn exec:java -Dexec.mainClass="com.ibm.wxd.datalabs.demo.cass_spark_iceberg.LoadCustomerOrdersById"
    ```
 
-   🔍 **Verify Data**: Check data creation in watsonx.data Query workspace or via CQL.
-
-   **Standalone HCD binary:**
-
-   ```bash
-   ./hcd-1.2.3/bin/cqlsh
-   ```
-   **Using Docker Cassandra:**
+   🔍 **Verify Data**: Check data creation in watsonx.data Query workspace or via CQL in the container:
 
    ```bash
    docker exec -it wxd-cassandra cqlsh -u cassandra -p cassandra
@@ -436,11 +440,11 @@ This section uses the [cass_spark_iceberg repository](https://github.ibm.com/pra
    - Upload JAR file: `cass-spark-iceberg-1.7.jar` → `spark-artifacts` bucket
 
 5. **📊 Monitor Execution**
-   - Execute logs watcher from the root of the repo: `../spark-logs.sh`
+   - Execute logs watcher from the root of the repo: `./spark-logs.sh`
    - Kick off the next step and watch results in the logs watcher terminal 🎉
 
 6. **🚀 Run OLAP Job**
-   - Navigate to `wx.d Infrastructure manager` → Click `Spark` engine
+   - Navigate to `wx.d Infrastructure Manager` → Click `Spark` engine
    - Click `Applications` → `Create application +`
    - Click `Payload` and paste the configuration while ensuring to replace `spark.cassandra.connection.host` with your machine's IP address:
 
@@ -450,7 +454,7 @@ This section uses the [cass_spark_iceberg repository](https://github.ibm.com/pra
            "application": "s3a://spark-artifacts/cass-spark-iceberg-1.7.jar",
            "class": "com.ibm.wxd.datalabs.demo.cass_spark_iceberg.CassandraToIceberg",
            "conf": {
-               "spark.cassandra.connection.host": "<YOUR-IP-HERE>>",
+               "spark.cassandra.connection.host": "<YOUR-IP-HERE>",
                "spark.cassandra.auth.username": "cassandra",
                "spark.cassandra.auth.password": "cassandra",
                "spark.sql.catalog.spark_catalog.warehouse": "s3a://olap/",
@@ -472,9 +476,184 @@ This section uses the [cass_spark_iceberg repository](https://github.ibm.com/pra
 
    Now click `Submit application` and watch the logging window for output.
 
+<a id="running-olap-queries-on-watsonxdata"></a>
+## 📈 Running OLAP queries on watsonx.data
+
+> 🎯 **Goal**: Register the OLAP Parquet layout in MinIO as queryable Hive tables and run SQL analytics (including window functions) through Presto.
+
+The Java application in Spark has read from your operational Cassandra tier (registered in the UI as the `hcd` catalog—the same pattern enterprises use with **DataStax HCD**) and written a Star Schema to Parquet in MinIO. More information about the Star Schema for this data set can be found in [./OLAP-STAR-SCHEMA.md](./OLAP-STAR-SCHEMA.md).
+
+> [!NOTE]
+> This process is often called an ETL (Extract - Transform - Load) process.
+> In this case, it:
+> 1. Extracts data from the operational Cassandra-compatible source
+> 2. Transforms the data into a Star Schema optimized for OLAP queries
+> 3. Loads the data as Parquet files into the MinIO object store
+
+> [!TIP]
+> ETL matters for operational systems such as **DataStax HCD**: they usually serve transactional workloads with tight SLAs. Running heavy OLAP directly on those clusters can hurt latency and breach SLAs, which is why patterns like this offload analytics to watsonx.data.
+
+💡 **Next:** use the following steps to leverage the data loaded into MinIO for OLAP queries in the UI.
+
+1. **🔗 Associate the MinIO bucket**
+   - Navigate to the Infrastructure Manager by clicking the "Infrastructure Manager" section.
+   - Click `Add component`, select MinIO and click `Next`
+   - Use the following configuration details:
+
+   | Field | Value |
+   |-------|-------|
+   | **Display name** | `OLAP` |
+   | **Bucket name** | `olap` |
+   | **Endpoint** | `http://ibm-lh-minio-svc:9000` |
+   | **Access key** | `dummyvalue` |
+   | **Secret key** | `dummyvalue` |
+   | **Associate catalog** | ✅ Checked |
+   | **Catalog type** | `Apache Hive` |
+   | **Catalog name** | `olap` |
+
+2. **🔗 Associate the OLAP Catalog with Presto**
+   - Within the watsonx.data UI, once your olap catalog has been created, you need to associate it with the Presto query engine to enable querying the Parquet files.
+   - Navigate to the Infrastructure Manager by clicking the "Infrastructure Manager" section.
+   - Hover over the `olap` catalog and click on `Manage associations`.
+   - Locate your newly created `olap` catalog and add it to Presto.
+   - Select the `presto-01` engine and click `Save and restart Engine`.
+   - Once the association is complete and Presto has restarted, your OLAP catalog is available.
+
+3. **🗂️ Create the schema**
+   - Navigate to the `Query workspace`
+   - Open a new worksheet `+`
+   - Click `<\>` behind `olap` and click `Generate CREATE...`
+   - Change the generated line to: `CREATE SCHEMA olap.customer_order WITH (location =  's3a://olap/customer_order');`
+   - And click `Run on presto-01`
+
+4. **📐 Create the `dim_customer` table from the Parquet file**
+   - Open a new worksheet `+`
+   - Run the following query
+
+   ```SQL
+   CREATE TABLE olap.customer_order.dim_customer (
+      customer_id VARCHAR,
+      customer_key BIGINT
+   )
+   WITH (
+      format = 'PARQUET',
+      external_location = 's3a://olap/customer_order/dim_customer/data/'
+   );
+   ```
+
+5. **📊 Create the `fact_customer_order` table from the Parquet file**
+   - Open a new worksheet `+`
+   - Run the following query
+
+   ```SQL
+   CREATE TABLE olap.customer_order.fact_customer_order (
+      order_id VARCHAR,
+      customer_key BIGINT,
+      date_key VARCHAR,
+      status_key BIGINT
+   )
+   WITH (
+      format = 'PARQUET',
+      external_location = 's3a://olap/customer_order/fact_customer_order/data/'
+   );
+   ```
+
+6. **🔎 Run an OLAP query for *total orders per customer***
+   - Open a new worksheet `+`
+   - Run the following query
+
+   ```SQL
+   SELECT 
+      c.customer_id,
+      COUNT(f.order_id) AS total_orders,
+      MAX(f.date_key) AS last_order_date
+   FROM olap.customer_order.fact_customer_order f
+   JOIN olap.customer_order.dim_customer c 
+      ON f.customer_key = c.customer_key
+   GROUP BY c.customer_id
+   ORDER BY total_orders DESC;
+   ```
+
+7. **⚡ Advanced OLAP: Window Function (Running Totals)**
+   - Open a new worksheet `+`
+   - Run the following query
+
+   ```SQL
+   SELECT 
+      c.customer_id,
+      f.date_key,
+      f.order_id,
+      COUNT(f.order_id) OVER (
+         PARTITION BY c.customer_id 
+         ORDER BY f.date_key ASC
+      ) AS running_order_count
+   FROM olap.customer_order.fact_customer_order f
+   JOIN olap.customer_order.dim_customer c 
+      ON f.customer_key = c.customer_key;
+   ```
+
+> 🎉 **Success!** You have successfully enabled an existing Parquet file to be queried through watsonx.data! This feature is called **Zero-Copy**. It keeps the data where it is and makes it available for querying centrally under governance.
+
 ---
 
+<a id="pause-restart-and-cleanup"></a>
+## 🧹 Pause, restart, and cleanup
+
+Use **Pause and restart** when you want to free resources temporarily. Use **Cleanup (tear down)** when you are finished with the lab and want to remove components.
+
+<a id="pause-and-restart"></a>
+### ⏸️ Pause and restart
+
+**🐳 Cassandra container** (from [section C](#c-datastax-hyper-converged-database)):
+
+```bash
+docker stop wxd-cassandra   # pause; keeps the container and its data volume
+docker start wxd-cassandra  # resume the same container
+```
+
+**☸️ Kind cluster** (watsonx.data on Kubernetes)
+
+```bash
+docker stop wxd-control-plane   # pause; stops the Kind node container and frees CPU/RAM
+docker start wxd-control-plane  # resume the same cluster
+```
+
+<a id="cleanup-tear-down"></a>
+### 🗑️ Cleanup (tear down)
+
+Do these when you want to remove lab resources from your machine.
+
+**1. 🐳 Cassandra (Docker)**
+
+```bash
+docker rm -f wxd-cassandra   # removes container; data inside that container is discarded
+```
+
+**2. 🔌 Port forwards**
+
+Stop the background `kubectl port-forward` processes you started for the UI, MinIO, or MDS (close those terminals, or stop the jobs you backgrounded with `nohup`).
+
+**3. 🧩 watsonx.data Developer Edition**
+
+- **IBM installer path**: follow the official **uninstall** or **remove** steps in the [watsonx.data Developer Edition documentation](https://www.ibm.com/docs/en/watsonxdata/standard/2.3.x?topic=developer-edition-new-version) for your platform.
+- **Manual Helm + Kind** (see [wxd-manual-install.md](./wxd-manual-install.md)):
+
+```bash
+helm uninstall wxd -n wxd
+kubectl delete namespace wxd   # optional; removes the namespace after the Helm release is gone
+kind delete cluster --name wxd
+```
+
+**4. 💾 Optional disk reclaim**
+
+Reclaim Docker/Podman disk space with `docker system prune` (review flags first; avoid `-a` unless you intend to remove all unused images).
+
+---
+
+<a id="references"></a>
 ## 📚 References
+
+> 📖 **Tip:** bookmark these links for installation details, HCD integration patterns, and the Spark + Iceberg sample repo.
 
 | Resource | Description | Link |
 |----------|-------------|------|
@@ -486,8 +665,6 @@ This section uses the [cass_spark_iceberg repository](https://github.ibm.com/pra
 
 <div align="center">
 
-*For additional support, please refer to the official documentation or contact your IBM representative.*
+*💬 For additional support, please refer to the official documentation or contact your IBM representative.*
 
 </div>
-
-/v2
