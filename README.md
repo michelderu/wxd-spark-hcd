@@ -443,7 +443,7 @@ This section uses the [cass_spark_iceberg repository](https://github.ibm.com/pra
    - Execute logs watcher from the root of the repo: `./spark-logs.sh`
    - Kick off the next step and watch results in the logs watcher terminal 🎉
 
-6. **🚀 Run OLAP Job**
+6. **🚀 Run ETL OLAP Job**
    - Navigate to `wx.d Infrastructure Manager` → Click `Spark` engine
    - Click `Applications` → `Create application +`
    - Click `Payload` and paste the configuration while ensuring to replace `spark.cassandra.connection.host` with your machine's IP address:
@@ -476,29 +476,36 @@ This section uses the [cass_spark_iceberg repository](https://github.ibm.com/pra
 
    Now click `Submit application` and watch the logging window for output.
 
+   > [!NOTE]
+   > The process above is often called an ETL (Extract - Transform - Load) process.
+   > In this case, it:
+   > 1. Extracts data from the operational Cassandra-compatible source
+   > 2. Transforms the data into a Star Schema optimized for OLAP queries
+   > 3. Loads the data as Parquet files into the MinIO object store
+
+   > [!TIP]
+   > ETL matters for operational systems such as **DataStax HCD**: they usually serve transactional workloads with tight SLAs. Running heavy OLAP directly on those clusters can hurt latency and breach SLAs, which is why patterns like this offload analytics to watsonx.data.
+
+7. **🔍 Verify files in MinIO**
+   - Sign in at [http://localhost:9001/login](http://localhost:9001/login) with `dummyvalue` / `dummyvalue`.
+   - Open **Buckets** → **`olap`** → **`customer_order/`**. You should see one prefix per Iceberg table written by the job:
+     - **`dim_customer/`**, **`dim_date/`**, **`dim_status/`**, **`fact_customer_order/`**
+   - Open any table prefix (for example **`dim_customer/`**). Under each table you should see **`metadata/`** (Iceberg JSON and manifest files) and **`data/`** (Parquet object files). Those objects are what the next section registers in Hive/Presto as external Parquet locations (for example `s3a://olap/customer_order/dim_customer/data/`).
+   - If **`customer_order/`** is missing or empty after a *successful* Spark run in the logs, double-check the application JSON (warehouse `s3a://olap/`, bucket endpoint keys, and credentials) and that the **`olap`** bucket exists.
+
 <a id="running-olap-queries-on-watsonxdata"></a>
 ## 📈 Running OLAP queries on watsonx.data
 
-> 🎯 **Goal**: Register the OLAP Parquet layout in MinIO as queryable Hive tables and run SQL analytics (including window functions) through Presto.
+> 🎯 **Goal**: Register the OLAP Parquet layout in MinIO as queryable Iceberg tables and run SQL analytics (including window functions) through Presto.
 
 The Java application in Spark has read from your operational Cassandra tier (registered in the UI as the `hcd` catalog—the same pattern enterprises use with **DataStax HCD**) and written a Star Schema to Parquet in MinIO. More information about the Star Schema for this data set can be found in [./OLAP-STAR-SCHEMA.md](./OLAP-STAR-SCHEMA.md).
-
-> [!NOTE]
-> This process is often called an ETL (Extract - Transform - Load) process.
-> In this case, it:
-> 1. Extracts data from the operational Cassandra-compatible source
-> 2. Transforms the data into a Star Schema optimized for OLAP queries
-> 3. Loads the data as Parquet files into the MinIO object store
-
-> [!TIP]
-> ETL matters for operational systems such as **DataStax HCD**: they usually serve transactional workloads with tight SLAs. Running heavy OLAP directly on those clusters can hurt latency and breach SLAs, which is why patterns like this offload analytics to watsonx.data.
 
 💡 **Next:** use the following steps to leverage the data loaded into MinIO for OLAP queries in the UI.
 
 1. **🔗 Associate the MinIO bucket**
    - Navigate to the Infrastructure Manager by clicking the "Infrastructure Manager" section.
    - Click `Add component`, select MinIO and click `Next`
-   - Use the following configuration details:
+   - Use the following configuration details:  
 
    | Field | Value |
    |-------|-------|
@@ -523,7 +530,8 @@ The Java application in Spark has read from your operational Cassandra tier (reg
    - Navigate to the `Query workspace`
    - Open a new worksheet `+`
    - Click `<\>` behind `olap` and click `Generate CREATE...`
-   - Change the generated line to: `CREATE SCHEMA olap.customer_order WITH (location =  's3a://olap/customer_order');`
+   - Change the generated line to:  
+   `CREATE SCHEMA olap.customer_order WITH (location =  's3a://olap/customer_order');`
    - And click `Run on presto-01`
 
 4. **📐 Create the `dim_customer` table from the Parquet file**
