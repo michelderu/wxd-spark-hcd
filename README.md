@@ -103,13 +103,23 @@ By following this lab end to end, you will learn how to:
 ## 🔧 Installation Steps
 
 <a id="a-container-runtime"></a>
-### A. Container runtime
+### A. Container environment
 
 Ensure you have your runtime of choice set up. Refer to [Container Fundamentals](https://github.com/michelderu/container-fundamentals) and the specific setup instructions for your architecture [here](https://github.com/michelderu/container-fundamentals/blob/main/course/08-setup-linux-macos-windows.md).
+
+**Required Runtime and Tools**
+
+- Container runtime
+   - Docker or Podman
+- Kubernetes
+   - `kind`
+   - `kubectl`
+   - `helm`
 
 <a id="b-ibm-watsonxdata-developer-edition"></a>
 ### B. IBM watsonx.data Developer Edition
 
+> [!NOTE]  
 > ⏱️ **Installation Time**: The setup process may take 15-30 minutes depending on your system performance.
 
 1. **📥 Download & Install**  
