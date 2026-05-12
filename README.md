@@ -50,7 +50,7 @@ Facilitate seamless integration of **DataStax HCD (Cassandra)** to manage extens
 <a id="what-youll-learn"></a>
 ### 🎓 What you'll learn
 By following this lab end to end, you will learn how to:
-- Register a Cassandra-compatible operational tier in watsonx.data (using **Apache Cassandra 5** in Docker—the same catalog and connectivity pattern you use with **DataStax HCD** in production).
+- Register a Cassandra-compatible operational tier in watsonx.data (using **Apache Cassandra 5** on **Kind**—the same catalog and connectivity pattern you use with **DataStax HCD** in production).
 - Run **federated SQL** over live operational data through Presto without copying it first.
 - **Offload** heavy analytics with **CTAS** into an Iceberg-backed catalog (materialized Parquet) to protect operational SLAs.
 - Submit a **Spark** application that builds a **star schema**, writes **Iceberg** tables to **MinIO** (S3-compatible storage), and **verify** the resulting objects in the bucket.
@@ -59,7 +59,7 @@ By following this lab end to end, you will learn how to:
 ### 📖 Scope
 **In scope for this repository**
 - Installing and reaching **IBM watsonx.data Developer Edition** (UI, optional MinIO console port-forward).
-- Running **Apache Cassandra 5** locally in Docker, loading sample schema/data, and registering it as the **`hcd`** catalog.
+- Running **Apache Cassandra 5** on **Kind** ([`cassandra.yaml`](./cassandra.yaml)), loading sample schema/data, and registering it as the **`hcd`** catalog.
 - **Federated** queries in Presto, **CTAS** materialization into Iceberg, and a **batch ETL** Spark job (Cassandra → star schema → Iceberg on MinIO—not continuous or low-latency replication).
 - Wiring **MinIO** into watsonx.data, registering external **Parquet** locations, and running example **analytics** queries in the Query workspace.
 
@@ -93,6 +93,7 @@ By following this lab end to end, you will learn how to:
 ### 📦 Required Software
 - **Docker/Podman** - Container runtime
 - **Kubernetes** - Container orchestration
+- **Helm** - Kubernetes package manager (required to install/upgrade watsonx.data and dependencies)
 - **Java 11 or 17** - For building and running the sample Spark/Cassandra Java project (`mvn`)
 - **Maven** - For building Java applications
 
@@ -115,7 +116,7 @@ Ensure you have your runtime of choice set up. Refer to [Container Fundamentals]
    Follow the [IBM watsonx.data Developer Edition installation steps](https://www.ibm.com/docs/en/watsonxdata/standard/2.3.x?topic=developer-edition-new-version).  
    
    > [!NOTE]
-   > Alternatively you can follow the DIY instructions [here](./wxd-manual-install.md).
+   > Alternatively you can follow the manual installation instructions [here](./wxd-manual-install.md).
 
 2. **🔍 Verify Installation**  
    Watch pods initializing:
@@ -192,44 +193,60 @@ Ensure you have your runtime of choice set up. Refer to [Container Fundamentals]
 <a id="c-datastax-hyper-converged-database"></a>
 ### C. DataStax Hyper-Converged Database
 
-**DataStax Hyper-Converged Database (HCD)** is DataStax’s Cassandra-compatible platform for large-scale operational workloads. In customer environments the cluster you register in watsonx.data is often HCD (or DSE or Astra). **This lab uses Apache Cassandra 5 in Docker** so you can follow the same catalog, federated SQL, Spark, and Iceberg steps without a separate HCD deployment.
+**DataStax Hyper-Converged Database (HCD)** is DataStax’s Cassandra-compatible platform for large-scale operational workloads. In customer environments the cluster you register in watsonx.data is often HCD (or DSE or Astra). **This lab uses Apache Cassandra 5 on Kubernetes (Kind)** via [`cassandra.yaml`](./cassandra.yaml) in the same cluster as watsonx.data so you can follow the same catalog, federated SQL, Spark, and Iceberg steps without a separate HCD deployment.
 
-1. **🐳 Run Cassandra 5 in Docker**
+1. **☸️ Run Cassandra 5 in Kind**
 
-   From the repository root (so `sample-data.cql` is on the host path used below):
+   Use the **same** Kind cluster where watsonx.data runs, with `kubectl` pointed at that context.
+
+   From the repository root:
 
    ```bash
-   docker run -d --name wxd-cassandra \
-     -p 9042:9042 \
-     -v "$(pwd)/sample-data.cql:/schema/sample-data.cql:ro" \
-     cassandra:5.0
+   kubectl apply -f cassandra.yaml
    ```
 
-   Wait until the node listens (first boot can take a minute or two):
+   Wait until the pod is ready (first boot can take a minute or two):
 
    ```bash
-   docker logs -f wxd-cassandra
+   kubectl wait --for=condition=ready pod/cassandra-0 -n cassandra --timeout=300s
    ```
 
-   > ✅ **Success indicator**: logs contain a Cassandra startup completion line such as `Startup complete`.
-
-   Press `Ctrl+C` to stop following logs; the container keeps running.
-
-2. **🔍 Test `cqlsh` inside the container**
+   Optional — stream logs until you see a startup completion line such as `Startup complete`:
 
    ```bash
-   docker exec -it wxd-cassandra cqlsh -u cassandra -p cassandra
+   kubectl logs -f cassandra-0 -n cassandra
+   ```
+
+   Press `Ctrl+C` to stop following logs; the pod keeps running.
+
+2. **🔌 Port-forward CQL to your machine**
+
+   For **localhost:9042** (local `cqlsh`, Maven samples that use `localhost` in `CassUtil.java`, or tools on your host), forward the StatefulSet pod:
+
+   ```bash
+   nohup kubectl port-forward -n cassandra pod/cassandra-0 9042:9042 --address 0.0.0.0 > /dev/null 2>&1 &
+   ```
+
+   > [!NOTE]
+   > **In-cluster clients** (Presto, Spark on Kubernetes) should use the Kubernetes DNS name below, not the port-forward.
+
+3. **🔍 Test `cqlsh` in the pod**
+
+   ```bash
+   kubectl exec -it -n cassandra cassandra-0 -- cqlsh
    ```
 
    Type `quit` to exit the CQL shell.
 
-3. **📊 Load sample data**
+4. **📊 Load sample data**
+
+   From the repository root (so `sample-data.cql` resolves correctly):
 
    ```bash
-   docker exec -i wxd-cassandra cqlsh -u cassandra -p cassandra -f /schema/sample-data.cql
+   kubectl exec -i -n cassandra cassandra-0 -- cqlsh < sample-data.cql
    ```
 
-> 🎉 **Success!** Cassandra is listening on **localhost:9042** and the sample schema/data are loaded. Use the connection values in the next section when you register the catalog in watsonx.data (from the cluster, `host.containers.internal` and port **9042** as in the table below).
+> 🎉 **Success!** Cassandra is running at **`cassandra.cassandra.svc.cluster.local:9042`** inside the cluster (StatefulSet pod **`cassandra-0`**, namespace **`cassandra`**). The sample schema/data are loaded. Use that hostname in watsonx.data when you register the catalog in the next section. With the port-forward above, you can also use **localhost:9042** from your machine.
 
 <a id="c-add-hcd-here-substituted-by-cassandra-to-watsonxdata"></a>
 ### C. Add HCD (here substituted by Cassandra) to watsonx.data
@@ -246,15 +263,10 @@ Ensure you have your runtime of choice set up. Refer to [Container Fundamentals]
    | Field | Value |
    |-------|-------|
    | **Display name** | `HCD` |
-   | **Hostname** | IP address of this machine that watsonx.data can reach (often your **local** IP or `host.docker.internal`; see below) |
+   | **Hostname** | `cassandra.cassandra.svc.cluster.local` |
    | **Port** | `9042` |
    | **Username** | `cassandra` |
    | **Password** | `cassandra` |
-
-   **🏠 Finding your LAN IP for Hostname (pick your OS):**
-   - **🐧 Linux:** `hostname -I | awk '{print $1}'` (first address listed; use the interface that reaches your Kubernetes cluster if several appear)
-   - **🍎 macOS:** `ipconfig getifaddr en0` — Wi-Fi is often `en0`; try `en1` or **System Settings → Network** if that returns nothing
-   - **🪟 Windows (Command Prompt or PowerShell):** run `ipconfig` and use the **IPv4 Address** on your active Ethernet or Wi-Fi adapter (skip Default Switch / Hyper-V adapters unless the cluster reaches you through those)
 
    Now first click `Test connection`. Then continue configuration:
 
@@ -402,43 +414,30 @@ This section uses the [cass_spark_iceberg repository](https://github.ibm.com/pra
    - Click `Create`
 
 2. **📥 Clone and Build Sample Application**  
-   This step depends on the Cassandra contact points being set correctly in `.../utils/CassUtil.java` on line 17.
-
-   To find the configured datacenter name, run **nodetool** inside the Cassandra container from [section C](#c-datastax-hyper-converged-database):
-
+   First clone the Spark app:
    ```bash
-   docker exec -it wxd-cassandra nodetool status | grep Datacenter
-   ```
-   
-   First clone the app:
-   ```bash
-   # Clone the example repository
    git clone git@github.ibm.com:pravin-bhat/cass_spark_iceberg.git
    cd cass_spark_iceberg
    ```
 
-   Then (optionally if required) update the `DATACENTER` value in `cass_spark_iceberg/src/main/java/com/ibm/wxd/datalabs/demo/cass_spark_iceberg/utils/CassUtil.java`.
-
    Now build the app:
 
    ```bash
-   # Update Cassandra connection settings in CassUtil.java
-   # Build the application
    mvn clean package
    ```
 
 3. **📊 Generate Sample Data**
 
-   This step uses:
+   Ensure the port forward for Cassandra is active, then run:
 
    ```bash
    mvn exec:java -Dexec.mainClass="com.ibm.wxd.datalabs.demo.cass_spark_iceberg.LoadCustomerOrdersById"
    ```
 
-   🔍 **Verify Data**: Check data creation in watsonx.data Query workspace or via CQL in the container:
+   🔍 **Verify Data**: Check data creation in watsonx.data Query workspace or via CQL in the pod (with [section C](#c-datastax-hyper-converged-database) port-forward active, you can also use `cqlsh localhost 9042` on your host):
 
    ```bash
-   docker exec -it wxd-cassandra cqlsh -u cassandra -p cassandra
+   kubectl exec -it -n cassandra cassandra-0 -- cqlsh
    ```
 
    Then run the following query:
@@ -447,11 +446,13 @@ This section uses the [cass_spark_iceberg repository](https://github.ibm.com/pra
    SELECT * FROM retail_ks.customer_orders_by_id;
    ```
 
+   Now type `quit`.
+
 4. **🪣 Prepare MinIO S3 Buckets**
    - Ensure MinIO service is port-forwarded (see [Section B](#b-ibm-watsonxdata-developer-edition))
    - Navigate to http://localhost:9001/login and login with `dummyvalue` / `dummyvalue`.
    - Create buckets: `olap` and `spark-artifacts`
-   - Upload JAR file: `cass-spark-iceberg-1.7.jar` → `spark-artifacts` bucket
+   - Upload JAR file: `./cass_spark_iceberg/cass-spark-iceberg-1.7.jar` → `spark-artifacts` bucket
 
 5. **📊 Monitor Execution**
    - Execute logs watcher from the root of the repo: `./spark-logs.sh`
@@ -460,7 +461,7 @@ This section uses the [cass_spark_iceberg repository](https://github.ibm.com/pra
 6. **🚀 Run ETL OLAP Job**
    - Navigate to `wx.d Infrastructure Manager` → Click `Spark` engine
    - Click `Applications` → `Create application +`
-   - Click `Payload` and paste the configuration while ensuring to replace `spark.cassandra.connection.host` with your machine's IP address:
+   - Click `Payload` and paste the configuration:
 
    ```json
    {
@@ -468,7 +469,7 @@ This section uses the [cass_spark_iceberg repository](https://github.ibm.com/pra
            "application": "s3a://spark-artifacts/cass-spark-iceberg-1.7.jar",
            "class": "com.ibm.wxd.datalabs.demo.cass_spark_iceberg.CassandraToIceberg",
            "conf": {
-               "spark.cassandra.connection.host": "<YOUR-IP-HERE>",
+               "spark.cassandra.connection.host": "cassandra.cassandra.svc.cluster.local",
                "spark.cassandra.auth.username": "cassandra",
                "spark.cassandra.auth.password": "cassandra",
                "spark.sql.catalog.spark_catalog.warehouse": "s3a://olap/",
@@ -514,7 +515,7 @@ This section uses the [cass_spark_iceberg repository](https://github.ibm.com/pra
 
 The Java application in Spark has read from your operational Cassandra tier (registered in the UI as the `hcd` catalog—the same pattern enterprises use with **DataStax HCD**) and written a Star Schema to Parquet in MinIO. More information about the Star Schema for this data set can be found in [./OLAP-STAR-SCHEMA.md](./OLAP-STAR-SCHEMA.md).
 
-💡 **Next:** use the following steps to leverage the data loaded into MinIO for OLAP queries in the UI.
+💡 **Next:** use the following steps to leverage the data loaded into MinIO for OLAP queries in the UI without having to copy it again (Zero-Copy).
 
 1. **🔗 Associate the MinIO bucket**
    - Navigate to the Infrastructure Manager by clicking the "Infrastructure Manager" section.
@@ -626,11 +627,11 @@ Use **Pause and restart** when you want to free resources temporarily. Use **Cle
 <a id="pause-and-restart"></a>
 ### ⏸️ Pause and restart
 
-**🐳 Cassandra container** (from [section C](#c-datastax-hyper-converged-database)):
+**☸️ Cassandra in Kind** (from [section C](#c-datastax-hyper-converged-database)):
 
 ```bash
-docker stop wxd-cassandra   # pause; keeps the container and its data volume
-docker start wxd-cassandra  # resume the same container
+kubectl scale statefulset cassandra --replicas=0 -n cassandra   # pause; PVCs keep data
+kubectl scale statefulset cassandra --replicas=1 -n cassandra   # resume
 ```
 
 **☸️ Kind cluster** (watsonx.data on Kubernetes)
@@ -645,15 +646,17 @@ docker start wxd-control-plane  # resume the same cluster
 
 Do these when you want to remove lab resources from your machine.
 
-**1. 🐳 Cassandra (Docker)**
+**1. ☸️ Cassandra (Kubernetes)**
+
+From the repository root (removes the namespace, PVCs, and data for this lab’s Cassandra):
 
 ```bash
-docker rm -f wxd-cassandra   # removes container; data inside that container is discarded
+kubectl delete -f cassandra.yaml
 ```
 
 **2. 🔌 Port forwards**
 
-Stop the background `kubectl port-forward` processes you started for the UI, MinIO, or MDS (close those terminals, or stop the jobs you backgrounded with `nohup`).
+Stop the background `kubectl port-forward` processes you started for the UI, MinIO, MDS, or **Cassandra 9042** (close those terminals, or stop the jobs you backgrounded with `nohup`).
 
 **3. 🧩 watsonx.data Developer Edition**
 
