@@ -115,7 +115,7 @@ Ensure you have your runtime of choice set up. Refer to [Container Fundamentals]
 1. **📥 Download & Install**  
    Follow the [IBM watsonx.data Developer Edition installation steps](https://www.ibm.com/docs/en/watsonxdata/standard/2.3.x?topic=developer-edition-new-version).  
    
-   > [!NOTE]
+   > [!NOTE]  
    > Alternatively you can follow the manual installation instructions [here](./wxd-manual-install.md).
 
 2. **🔍 Verify Installation**  
@@ -227,7 +227,7 @@ Ensure you have your runtime of choice set up. Refer to [Container Fundamentals]
    nohup kubectl port-forward -n cassandra pod/cassandra-0 9042:9042 --address 0.0.0.0 > /dev/null 2>&1 &
    ```
 
-   > [!NOTE]
+   > [!NOTE]  
    > **In-cluster clients** (Presto, Spark on Kubernetes) should use the Kubernetes DNS name below, not the port-forward.
 
 3. **🔍 Test `cqlsh` in the pod**
@@ -491,14 +491,14 @@ This section uses the [cass_spark_iceberg repository](https://github.ibm.com/pra
 
    Now click `Submit application` and watch the logging window for output.
 
-   > [!NOTE]
+   > [!NOTE]  
    > The process above is often called an ETL (Extract - Transform - Load) process.
    > In this case, it:
    > 1. Extracts data from the operational Cassandra-compatible source
    > 2. Transforms the data into a Star Schema optimized for OLAP queries
    > 3. Loads the data as Parquet files into the MinIO object store
 
-   > [!TIP]
+   > [!TIP]  
    > ETL matters for operational systems such as **DataStax HCD**: they usually serve transactional workloads with tight SLAs. Running heavy OLAP directly on those clusters can hurt latency and breach SLAs, which is why patterns like this offload analytics to watsonx.data.
 
 7. **🔍 Verify files in MinIO**
