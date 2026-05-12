@@ -105,7 +105,7 @@ By following this lab end to end, you will learn how to:
 <a id="a-container-runtime"></a>
 ### A. Container environment
 
-Ensure you have your runtime of choice set up. Refer to [Container Fundamentals](https://github.com/michelderu/container-fundamentals) and the specific setup instructions for your architecture [here](https://github.com/michelderu/container-fundamentals/blob/main/course/08-setup-linux-macos-windows.md).
+Ensure you have your runtime of choice set up. Refer to [Container Fundamentals](https://github.com/michelderu/container-fundamentals) and the specific setup instructions for your architecture [here](https://github.com/michelderu/container-fundamentals/blob/main/course/09-setup-linux-macos-windows.md).
 
 **Required Runtime and Tools**
 
