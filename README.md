@@ -17,6 +17,7 @@
 ## 📋 Table of Contents
 
 - [🎯 Overview](#overview)
+  - [What you'll learn](#what-youll-learn)
 - [⚙️ Prerequisites](#prerequisites)
 - [🔧 Installation Steps](#installation-steps)
   - [A. Container runtime](#a-container-runtime)
@@ -46,13 +47,26 @@
 ### 🎯 Purpose
 Facilitate seamless integration of **DataStax HCD (Cassandra)** to manage extensive operational workloads, using **IBM watsonx.data** for enhanced governed analytics capabilities.
 
+<a id="what-youll-learn"></a>
+### 🎓 What you'll learn
+By following this lab end to end, you will learn how to:
+- Register a Cassandra-compatible operational tier in watsonx.data (using **Apache Cassandra 5** in Docker—the same catalog and connectivity pattern you use with **DataStax HCD** in production).
+- Run **federated SQL** over live operational data through Presto without copying it first.
+- **Offload** heavy analytics with **CTAS** into an Iceberg-backed catalog (materialized Parquet) to protect operational SLAs.
+- Submit a **Spark** application that builds a **star schema**, writes **Iceberg** tables to **MinIO** (S3-compatible storage), and **verify** the resulting objects in the bucket.
+- Associate that object storage with a **Hive** catalog, expose it to **Presto**, and query the **Parquet** layout with **OLAP-style SQL** (including external tables / zero-copy style access to files already in the lake).
+
 ### 📖 Scope
-This guide covers:
-- ✅ Installation of IBM watsonx.data Developer Edition
-- ✅ Operational **Apache Cassandra 5** in Docker (same integration patterns you use with **DataStax HCD** in production)
-- ✅ Integration between operational and analytical systems
-- ✅ Real-time data synchronization using Apache Spark
-- ✅ Materialized analytics with Apache Iceberg tables
+**In scope for this repository**
+- Installing and reaching **IBM watsonx.data Developer Edition** (UI, optional MinIO console port-forward).
+- Running **Apache Cassandra 5** locally in Docker, loading sample schema/data, and registering it as the **`hcd`** catalog.
+- **Federated** queries in Presto, **CTAS** materialization into Iceberg, and a **batch ETL** Spark job (Cassandra → star schema → Iceberg on MinIO—not continuous or low-latency replication).
+- Wiring **MinIO** into watsonx.data, registering external **Parquet** locations, and running example **analytics** queries in the Query workspace.
+
+**Out of scope**
+- Sizing, hardening, or operating a production **DataStax HCD** cluster; multi-datacenter replication; security beyond lab defaults.
+- **Streaming** or **CDC**-style change capture; this lab uses on-demand Spark runs and SQL-driven materialization instead.
+- Product licensing, billing, or IBM Cloud SaaS-specific deployment—the steps target **Developer Edition** on your machine.
 
 ### 👥 Target Audience
 - 🧑‍💻 **Developers** - Implementation and integration

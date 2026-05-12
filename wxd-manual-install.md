@@ -55,7 +55,7 @@ What to look for:
 Even in manual mode, get the official package from IBM docs:
 
 - Start from **[Installing watsonx.data Standard](https://www.ibm.com/docs/en/watsonxdata/standard/2.3.x?topic=version-installing)**.
-- For Linux follow the package download/extract guidance in **[Installing watsonx.data developer edition on Linux(RHEL)](https://www.ibm.com/docs/en/watsonxdata/standard/2.3.x?topic=installing-watsonxdata-developer-edition-linuxrhel)**.
+- Follow the package download/extract guidance in **[Installing watsonx.data developer edition on Linux(RHEL)](https://www.ibm.com/docs/en/watsonxdata/standard/2.3.x?topic=installing-watsonxdata-developer-edition-linuxrhel)** (also use this path for manual installation on Windows or macOS).
 
 Then install with Helm from the extracted `watsonx.data-developer-edition-installer` directory:
 
